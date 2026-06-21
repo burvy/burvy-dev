@@ -2,7 +2,7 @@ use leptos::prelude::*;
 
 #[component]
 pub fn Chat() -> impl IntoView {
-    let (input, set_input) = signal("input here".to_string());
+    let (input, set_input) = signal("".to_string());
     view! {
         <textarea
             class="text-input"
