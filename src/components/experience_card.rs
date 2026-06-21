@@ -3,6 +3,7 @@ use leptos_router::components::A;
 
 use crate::experiences;
 
+/// renders the experience card, please don't touch this bc it is good
 #[component]
 pub fn ExperienceCard(experience: experiences::Experience) -> impl IntoView {
     view! {

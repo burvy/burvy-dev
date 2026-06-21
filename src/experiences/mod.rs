@@ -1,4 +1,5 @@
 /// a clickable experience! its like roblox they call their games "experiences" its so dumb
+/// dont touch this btw
 #[derive(Clone, Copy)]
 pub struct Experience {
     pub name: &'static str,
@@ -7,6 +8,8 @@ pub struct Experience {
     pub background: &'static str,
 }
 
+/// add new experiences here
+/// theyre just structs
 pub const EXPERIENCES: &[Experience] = &[Experience {
     name: "Test",
     background: "images/glitchcity.jpg",
@@ -14,4 +17,5 @@ pub const EXPERIENCES: &[Experience] = &[Experience {
     path: "/test",
 }];
 
+/// also add the pages here as you add experiences
 pub mod test;
