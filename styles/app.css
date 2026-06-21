@@ -14,10 +14,16 @@
 .card:hover {
     transform: scale(1.05);
 }
+/* this makes sure all elements are above the effects */
 .card > * {
     position: relative;
     z-index: 1;
 }
+/*
+    the before stuff are pseudo elements;
+    allows us to render darkening after
+    the background but before the text
+*/
 .card::before {
     pointer-events: none;
     z-index: 0;
