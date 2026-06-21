@@ -12,6 +12,17 @@
 .card:hover {
     transform: scale(1.05);
 }
+.card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+    transition: background 0.15s ease;
+}
+.card:hover::before {
+    background: rgba(0, 0, 0, 0.1);
+}
 
 .card-list {
     display: grid;
