@@ -1,0 +1,6 @@
+.card {
+    display: block;
+    min-height: 240px;
+    background-size: cover;
+    background-position: center;
+}

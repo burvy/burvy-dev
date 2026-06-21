@@ -1,4 +1,6 @@
 mod app;
+mod components;
+mod experiences;
 mod pages;
 
 fn main() {
