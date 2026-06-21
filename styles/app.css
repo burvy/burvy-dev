@@ -4,7 +4,7 @@
     display: block;
     color: white;
     font-family: "Helvetica";
-    min-height: 180px;
+    min-height: 100px;
     border-radius: 1rem;
     padding: 2rem;
     background-size: cover;
@@ -41,5 +41,6 @@
 .card-list {
     display: grid;
     gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
     margin-top: 2rem;
 }
