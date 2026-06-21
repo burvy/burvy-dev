@@ -8,12 +8,12 @@ use crate::experiences;
 pub fn Home() -> impl IntoView {
     view! {
         <h1>"hi welcome to my site"</h1>
-        <div>
+        <section class="card-list">
             {experiences::EXPERIENCES
                 .iter()
                 .copied()
                 .map(|exp| view! { <ExperienceCard experience=exp /> })
                 .collect::<Vec<_>>()}
-        </div>
+        </section>
     }
 }

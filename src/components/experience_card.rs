@@ -7,7 +7,7 @@ use crate::experiences;
 #[component]
 pub fn ExperienceCard(experience: experiences::Experience) -> impl IntoView {
     view! {
-        <A href=experience.path>
+        <A href=experience.path target="_blank">
             <div class="card" style=format!("background-image: url('{}')", experience.background)>
                 <h1>{experience.name}</h1>
                 <p>{experience.description}</p>

@@ -1,6 +1,20 @@
 .card {
     display: block;
-    min-height: 240px;
+    color: white;
+    font-family: "Helvetica";
+    min-height: 180px;
+    border-radius: 1rem;
+    padding: 2rem;
     background-size: cover;
     background-position: center;
+    transition: transform 0.1s ease;
+}
+.card:hover {
+    transform: scale(1.05);
+}
+
+.card-list {
+    display: grid;
+    gap: 1rem;
+    margin-top: 2rem;
 }
