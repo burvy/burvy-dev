@@ -9,10 +9,14 @@ pub fn Home() -> impl IntoView {
     view! {
         <h1>"hi welcome to my site"</h1>
         <section class="card-list">
+            // newest elements at the bottom are the newest at the top
             {experiences::EXPERIENCES
                 .iter()
                 .copied()
-                .map(|exp| view! { <ExperienceCard experience=exp /> })
+                .rev()
+                .map(|exp| {
+                    view! { <ExperienceCard experience=exp /> }
+                })
                 .collect::<Vec<_>>()}
         </section>
     }

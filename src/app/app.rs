@@ -14,6 +14,7 @@ pub fn App() -> impl IntoView {
             <Routes fallback=|| view! { <pages::notfound::NotFound /> }>
                 <Route path=path!("/") view=pages::home::Home />
                 <Route path=path!("/test") view=experiences::test::Test />
+                <Route path=path!("/chat") view=experiences::chat::Chat />
             </Routes>
         </Router>
     }
