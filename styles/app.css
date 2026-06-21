@@ -1,4 +1,6 @@
 .card {
+    position: relative;
+    overflow: hidden;
     display: block;
     color: white;
     font-family: "Helvetica";
@@ -12,12 +14,18 @@
 .card:hover {
     transform: scale(1.05);
 }
+.card > * {
+    position: relative;
+    z-index: 1;
+}
 .card::before {
+    pointer-events: none;
+    z-index: 0;
     content: "";
     position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
-    z-index: -1;
+    z-index: 0;
     transition: background 0.15s ease;
 }
 .card:hover::before {
