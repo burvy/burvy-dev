@@ -62,5 +62,6 @@ async fn handle_connection(incoming: IncomingSession) -> Result<()> {
         println!("received: {}", message); // hiiii!!!!
 
         send.write_all(b"hi i saw ur msg hi").await?;
+        send.finish().await?; // finish sending the message
     }
 }
