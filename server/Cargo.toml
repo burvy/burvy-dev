@@ -1,0 +1,10 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# error handling will be good for us
+anyhow = "1.0.102"
+tokio = { version = "1.52.3", features = ["full"] }
+wtransport = "0.7.1"
