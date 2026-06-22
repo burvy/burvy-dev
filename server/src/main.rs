@@ -1,7 +1,8 @@
 use anyhow::Result;
 use std::time::Duration;
 use wtransport::endpoint::IncomingSession;
-use wtransport::{Endpoint, Identity, ServerConfig};
+use tokio::sync::broadcast;
+use wtransport::{Endpoint, Identity, ServerConfig, Connection};
 
 /// port forwarded on server pc and network
 /// change this port if the server setup changes
@@ -23,12 +24,14 @@ async fn main() -> Result<()> {
         .keep_alive_interval(Some(Duration::from_secs(3))) // dont die on me again
         .build();
     let server = Endpoint::server(config)?; // create the server please dont go wrong
+    let (message_text, _) = broadcast::channel::<String>(100);
     loop {
         let incoming = server.accept().await;
 
+        let message_text_clone = message_text.clone();
         // new async task for every browser that we accept (we accept everyone!)
         tokio::spawn(async move {
-            if let Err(e) = handle_connection(incoming).await {
+            if let Err(e) = handle_connection(incoming, message_text_clone).await {
                 eprintln!("Error: {}", e);
             }
         });
@@ -36,11 +39,12 @@ async fn main() -> Result<()> {
 }
 
 /// handle one connection
-async fn handle_connection(incoming: IncomingSession) -> Result<()> {
+async fn handle_connection(incoming: IncomingSession, message_text: broadcast::Sender<String>,) -> Result<()> {
     let connect_req = incoming.await?;
     // this will be useful for different paths like /chat or / something
     println!("requested authority: {}, path: {}", connect_req.authority(), connect_req.path());
     let connection = connect_req.accept().await?; // yayy
+    println!("connect request accepted");
     loop {
         // send, receive
         // lets open a bidirectional stream
