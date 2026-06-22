@@ -2,7 +2,11 @@ use js_sys::{Reflect, Uint8Array};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::{
-    ReadableStream, ReadableStreamDefaultReader
+    ReadableStream,
+    ReadableStreamDefaultReader,
+    WebTransport,
+    WebTransportBidirectionalStream,
+    WebTransportReceiveStream,
 };
 
 
