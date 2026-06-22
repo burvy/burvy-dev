@@ -52,3 +52,8 @@
     height: 10rem;
     width: 100%;
 }
+.chat-messages {
+    height: 400px;
+    width: 250px;
+    overflow-y: auto;
+}
