@@ -2,6 +2,7 @@ mod app;
 mod components;
 mod experiences;
 mod pages;
+mod realtime;
 
 // wow so clean
 fn main() {
