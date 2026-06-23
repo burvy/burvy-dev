@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{mpsc, Mutex};
@@ -12,6 +12,8 @@ const PORT: u16 = 4433;
 
 /// biggest message you can send in bytes (self explanatory)
 const MAX_MESSAGE_BYTES: usize = 4096;
+
+const MAX_HISTORY_MESSAGES: usize = 512;
 // certificate and key paths
 // theyre not acc here so
 // u cant steal my info
@@ -26,7 +28,13 @@ const KEY_PATH: &str = r"C:\burvy\certs\webtrans.burvy.dev\webtrans.burvy.dev-ke
 #[derive(Default)]
 struct ServerState {
     client_counter: u64,
-    rooms: HashMap<String, HashMap<u64, Outbox>>,
+    rooms: HashMap<String, Room>,
+}
+
+#[derive(Default)]
+struct Room {
+    clients: HashMap<u64, Outbox>,
+    history: VecDeque<String>,
 }
 
 /// what the client wants to send
@@ -107,8 +115,16 @@ async fn join_room(
     // set the next client id to be unique since we are using this current one now
     state.client_counter += 1;
 
-    // find this room, or create it if it doesnt exist and put the client outbox in it in either case
-    state.rooms.entry(room.to_string()).or_default().insert(client_id, outbox);
+    // find this room, or create it if it doesnt exist
+    let room = state.rooms.entry(room.to_string()).or_default();
+    room.clients.insert(client_id, outbox.clone());
+
+    room.history.iter().for_each(|message| {
+        if outbox.send(message.clone()).is_err() {
+            eprintln!("client couldnt receive history");
+        }
+    });
+
     (client_id, inbox)
 }
 
@@ -124,9 +140,9 @@ async fn leave_room(state: &SharedState, room: &str, client_id: u64) {
     };
 
     // remove the client from this room when they leave
-    this_room.remove(&client_id);
+    this_room.clients.remove(&client_id);
     // remove the room if this was the last client to leave
-    if this_room.is_empty() {
+    if this_room.clients.is_empty() && this_room.history.is_empty() {
         state.rooms.remove(room);
     }
 }
@@ -178,20 +194,18 @@ async fn read_messages_from_client(
 async fn broadcast_to_room(state: &SharedState, room: &str, message: String) {
     let clients = {
         // oooh we are modifying the global server state againn
-        let state = state.lock().await;
+        let mut state = state.lock().await;
+        let room = state.rooms.entry(room.to_string()).or_default();
 
+        room.history.push_back(message.clone());
 
-        // copies all the outboxes
-        state
-            .rooms
-            .get(room)
-            .map(|clients| {
-                clients
-                    .iter()
-                    .map(|(&client_id, outbox)| (client_id, outbox.clone()))
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default()
+        while room.history.len() > MAX_HISTORY_MESSAGES {
+            room.history.pop_front();
+        }
+        room.clients
+            .iter()
+            .map(|(&client_id, outbox)| (client_id, outbox.clone()))
+            .collect::<Vec<_>>()
     };
     // note that the state is unlocked by this point so sending messages is kind of async
 
