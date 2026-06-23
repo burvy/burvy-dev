@@ -8,6 +8,7 @@ use web_sys::{
 
 const SERVER: &str = "https://webtrans.burvy.dev:4433";
 
+
 #[derive(Clone)]
 pub struct WebTrans {
     transport: WebTransport,
@@ -26,6 +27,10 @@ pub async fn connect(
 
 
 impl WebTrans {
+    pub fn new(transport: WebTransport) -> Self {
+        Self { transport }
+    }
+
     pub async fn send(&self, msg: &str) -> Result<(), JsValue> {
         // opens a bidirectional stream for each message
         let stream = JsFuture::from(self.transport.create_bidirectional_stream())
