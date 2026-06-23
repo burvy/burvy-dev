@@ -27,9 +27,10 @@ pub async fn connect(
 
 
 impl WebTrans {
-    pub fn new(transport: WebTransport) -> Self {
-        Self { transport }
-    }
+    // TODO: wanna use this sometime?
+    // pub fn new(transport: WebTransport) -> Self {
+    //     Self { transport }
+    // }
 
     pub async fn send(&self, msg: &str) -> Result<(), JsValue> {
         // opens a bidirectional stream for each message
