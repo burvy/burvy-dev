@@ -71,7 +71,6 @@ async fn main() -> Result<()> {
 /// handle one connection
 /// this connection is able to access the shared server state
 async fn handle_connection(incoming: IncomingSession, state: SharedState) -> Result<()> {
-
     // process and accept a connection
     let connect_req = incoming.await?;
     println!("requested authority: {}, path: {}", connect_req.authority(), connect_req.path());
@@ -79,10 +78,8 @@ async fn handle_connection(incoming: IncomingSession, state: SharedState) -> Res
     let room = connect_req.path().to_string();
     let connection = connect_req.accept().await?; // yayy
     println!("connection request accepted");
-
     // join them to taht room
     let (client_id, mut inbox) = join_room(&state, &room).await;
-
     // start letting them send stuff
     let send_connection = connection.clone();
     let send_task = tokio::spawn(async move {

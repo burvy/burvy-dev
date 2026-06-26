@@ -48,12 +48,35 @@
     margin-top: 2rem;
 }
 
-.text-input {
-    height: 10rem;
-    width: 100%;
-}
+/*
+List styles
+*/
 .chat-messages {
-    height: 400px;
-    width: 250px;
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    overflow: scroll scroll;
+    flex: 1;
+}
+/*
+Input styles
+*/
+.texterior {
+    display: grid;
+    grid-template-columns: 9fr 1fr;
+    position: fixed;
+    bottom: 0;
+}
+.tinput {
+    background: transparent;
+    color: darkred;
+    font-size: 40px;
+}
+.submit {
+    padding: 15px 15px;
+    font-weight: 900;
+    font-size: 20px;
+    background-color: coral;
+    color: darkred;
 }

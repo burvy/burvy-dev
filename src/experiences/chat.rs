@@ -71,30 +71,38 @@ pub fn Chat() -> impl IntoView {
             <h1>"Chatroom"</h1>
 
             <p>"you are " {move || status.get()}</p>
-
-            <ul class="chat-messages" node_ref=list_ref>
-                {move || {
-                    messages
-                        .get()
-                        .into_iter()
-                        .map(|message| view! { <li>{message}</li> })
-                        .collect_view()
-                }}
-            </ul>
+            <div>
+                <ul class="chat-messages" node_ref=list_ref>
+                    {move || {
+                        messages
+                            .get()
+                            .into_iter()
+                            .map(|message| view! { <li>{message}</li> })
+                            .collect_view()
+                    }}
+                </ul>
+            </div>
 
             <form on:submit=move |ev| {
                 ev.prevent_default();
                 send();
             }>
-                <input
-                    placeholder="type something!"
-                    on:input:target=move |ev| set_input.set(ev.target().value())
-                    prop:value=input
-                />
+                <div class="texterior">
+                    <input
+                        class="tinput"
+                        placeholder="type something!"
+                        on:input:target=move |ev| set_input.set(ev.target().value())
+                        prop:value=input
+                    />
 
-                <button type="submit" disabled=move || status.get() != "connected">
-                    "send"
-                </button>
+                    <button
+                        class="submit"
+                        type="submit"
+                        disabled=move || status.get() != "connected"
+                    >
+                        ">>"
+                    </button>
+                </div>
             </form>
         </main>
     }
