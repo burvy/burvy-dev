@@ -1,5 +1,5 @@
 # burvy's portfolio site
-A site to showcase a bunch of different tools in Rust
+A site to showcase a bunch of stuff in Rust
 # WebTransport Server
 I used the [wtransport](https://docs.rs/wtransport/latest/wtransport/) crate.
 The first basic iteration of the server worked in a funky way. 
