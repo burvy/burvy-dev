@@ -139,6 +139,7 @@ async fn leave_room(state: &SharedState, room: &str, client_id: u64) {
     // remove the client from this room when they leave
     this_room.clients.remove(&client_id);
     // remove the room if this was the last client to leave
+	// TODO: review this
     if this_room.clients.is_empty() && this_room.history.is_empty() {
         state.rooms.remove(room);
     }
