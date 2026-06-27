@@ -6,6 +6,9 @@ use web_sys::{
     WebTransportReceiveStream,
 };
 
+/// the server address
+/// server handles all the encryption and stuff already
+/// note that webtransport only wants to work through an HTTPS connection
 const SERVER: &str = "https://webtrans.burvy.dev:4433";
 
 
@@ -22,15 +25,15 @@ pub async fn connect(
     let transport = WebTransport::new(&format!("{}/{}", SERVER, room.trim_start_matches("/")))?;
     JsFuture::from(transport.ready()).await?; // wait for the room to be ready
     spawn_local(recv_loop(transport.clone(), msg_fn));
-    Ok(WebTrans { transport })
+    Ok(WebTrans::new(transport))
 }
 
 
 impl WebTrans {
-    // TODO: wanna use this sometime?
-    // pub fn new(transport: WebTransport) -> Self {
-    //     Self { transport }
-    // }
+    /// this is NOT WebTransport::new(), TWO DIFFERENT THINGS!!!!!!
+    pub fn new(transport: WebTransport) -> Self {
+        Self { transport }
+    }
 
     pub async fn send(&self, msg: &str) -> Result<(), JsValue> {
         // opens a bidirectional stream for each message
