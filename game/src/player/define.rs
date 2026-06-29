@@ -7,9 +7,7 @@ use bevy_tnua::{
 
 #[derive(Component, Clone, Default)]
 pub struct PlayerData {
-    /// the velocity a player wants to go
-    /// should be reset every frame
-    pos: Vec3,
+    pos: Vec3, // TODO: update pos as well so we can send it over the network later on
 }
 
 #[derive(Component, Clone, Default)] // compiler happi
