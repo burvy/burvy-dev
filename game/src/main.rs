@@ -17,5 +17,6 @@ impl Plugin for MainPlugin {
             TnuaControllerPlugin::<player::define::PlayerScheme>::new(FixedUpdate),
             TnuaAvian3dPlugin::new(FixedUpdate),
         ));
+        app.add_plugins(player::PlayerPlugin);
     }
 }

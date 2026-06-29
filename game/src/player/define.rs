@@ -13,22 +13,17 @@ pub enum PlayerScheme {
     Jump(TnuaBuiltinJump),
 }
 
-fn spawn_player(cmds: &mut Commands) {
-    cmds.spawn(bsn! {
-        Player {
-            Transform::from_xyz(0.0, 5.0, 0.0),
-            RigidBody::Dynamic,
-            Collider::capsule(0.5, 1.0),
-            PlayerData::default(),
-        }
-    });
-}
-
-fn spawn_player_legacy(cmds: &mut Commands) {
+pub fn build_scene(mut cmds: Commands) {
     cmds.spawn((
-        Transform::from_xyz(0.0, 5.0, 0.0),
         RigidBody::Dynamic,
         Collider::capsule(0.5, 1.0),
-        PlayerData::default(),
+        spawn_player(),
     ));
+}
+
+fn spawn_player() -> impl Scene {
+    bsn! {
+        Transform::from_xyz(0.0, 5.0, 0.0)
+        PlayerData::default()
+    }
 }
