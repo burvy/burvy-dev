@@ -31,11 +31,12 @@ pub fn move_player(
     player.0.basis = TnuaBuiltinWalk {
         desired_motion: desire,
         desired_forward: Some(Dir3::Z), // WHAT THE HECK WHY WHY WHY
-    }
+    };
     if keys.pressed(KeyCode::Space) {
-        player.0.action(TnuaBuiltinJump {
-            height: JUMP_VEL,
-            ..default()
-        });
+        player
+            .0
+            .action(super::define::PlayerScheme::Jump(TnuaBuiltinJump {
+                ..default() // sorryy no height field here
+            }));
     }
 }
