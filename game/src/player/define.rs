@@ -45,7 +45,12 @@ pub fn build_scene(mut cmds: Commands, mut configs: ResMut<Assets<PlayerSchemeCo
 fn spawn_player() -> impl Scene {
     bsn! {
         Transform::from_xyz(0.0, 5.0, 0.0)
+        PlayerData
         MainPlayer // yes we are the main player
-        PlayerData::default()
+        Children [
+            (
+                Camera3d
+            )
+        ]
     }
 }
