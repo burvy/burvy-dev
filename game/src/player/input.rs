@@ -33,6 +33,6 @@ pub fn move_player(
     }
     player.0.basis = TnuaBuiltinWalk {
         desired_motion: desire,
-        desired_forward: Some(Dir3::Z),
+        desired_forward: Some(Dir3::Z), // WHAT THE HECK WHY WHY WHY
     }
 }
