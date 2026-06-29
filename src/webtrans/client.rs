@@ -35,6 +35,7 @@ impl WebTrans {
         Self { transport }
     }
 
+
     pub async fn send(&self, msg: &str) -> Result<(), JsValue> {
         // opens a bidirectional stream for each message
         let stream = JsFuture::from(self.transport.create_bidirectional_stream())

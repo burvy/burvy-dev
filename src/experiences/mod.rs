@@ -20,6 +20,19 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/test",
     },
     Experience {
+        name: "Source Code",
+        background: "images/github.png",
+        description: "the source code for this website",
+        path: "https://github.com/burvy/burvy-dev",
+    },
+    Experience {
+        name: "StatesMC Website",
+        description:
+            "the website for my minecraft server - the only one with guns for java edition!",
+        path: "https://statesmc.us/",
+        background: "images/mwg.png",
+    },
+    Experience {
         name: "Chatroom",
         background: "images/chat.png",
         description: "chatroom chat",
