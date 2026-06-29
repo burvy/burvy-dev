@@ -2,3 +2,5 @@
 dist/
 Cargo.lock
 server/target/
+game/target/
+game/Cargo.lock
