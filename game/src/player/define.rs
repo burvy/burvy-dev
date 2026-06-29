@@ -26,8 +26,8 @@ pub fn build_scene(mut cmds: Commands) {
         RigidBody::Dynamic,
         Collider::capsule(0.5, 1.0),
         TnuaController::<PlayerScheme>::default(),
-        TnuaConfig::<PlayerScheme>(config_handle),
-        // playerdata handled in bsn macro
+        TnuaConfig::<PlayerScheme>(config_handle), // TODO: what here?
+                                                   // playerdata handled in bsn macro
     ));
 }
 /// put bsn macro stuff in here and unfortunately it is not fully supported
