@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_tnua::prelude::*;
 
 const SPEED: f32 = 6.7;
-const JUMP_VEL: f32 = 17.6867;
+pub const JUMP_VEL: f32 = 17.6867;
 
 pub fn move_player(
     mut player: Single<
@@ -28,11 +28,14 @@ pub fn move_player(
     if keys.pressed(KeyCode::KeyD) {
         desire.x += SPEED;
     }
-    if keys.pressed(KeyCode::Space) {
-        desire.y += JUMP_VEL;
-    }
     player.0.basis = TnuaBuiltinWalk {
         desired_motion: desire,
         desired_forward: Some(Dir3::Z), // WHAT THE HECK WHY WHY WHY
+    }
+    if keys.pressed(KeyCode::Space) {
+        player.0.action(TnuaBuiltinJump {
+            height: JUMP_VEL,
+            ..default()
+        });
     }
 }
