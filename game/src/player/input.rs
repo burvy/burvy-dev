@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy_tnua::prelude::*;
 
+use super::define::WantMove;
+
 const SPEED: f32 = 6.7;
 pub const JUMP_VEL: f32 = 17.6867;
 
@@ -14,23 +16,20 @@ pub fn move_player(
     >,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
-    let mut desire: Vec3 = Vec3::ZERO;
     // TODO: replace with configurable keybinds later on
-    if keys.pressed(KeyCode::KeyW) {
-        desire.z += SPEED;
-    }
-    if keys.pressed(KeyCode::KeyS) {
-        desire.z -= SPEED;
-    }
-    if keys.pressed(KeyCode::KeyA) {
-        desire.x -= SPEED;
-    }
-    if keys.pressed(KeyCode::KeyD) {
-        desire.x += SPEED;
-    }
+    let desire = WantMove {
+        x: keys.pressed(KeyCode::KeyD) as i8 - keys.pressed(KeyCode::KeyA) as i8,
+        z: keys.pressed(KeyCode::KeyW) as i8 - keys.pressed(KeyCode::KeyS) as i8,
+    };
+    let dir = Vec3 {
+        x: desire.x as f32 * SPEED,
+        y: 0.0,
+        z: desire.z as f32 * SPEED,
+    };
+
     player.0.basis = TnuaBuiltinWalk {
-        desired_motion: desire,
-        desired_forward: Some(Dir3::Z), // WHAT THE HECK WHY WHY WHY
+        desired_motion: dir,
+        desired_forward: Some(Dir3::Z), // WHAT THE HECK WHY WHY SOME WHY
     };
     if keys.pressed(KeyCode::Space) {
         player

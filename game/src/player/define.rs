@@ -8,10 +8,25 @@ use bevy_tnua::{
 #[derive(Component, Clone, Default)]
 pub struct PlayerData {
     pos: Vec3, // TODO: update pos as well so we can send it over the network later on
+    want_move: WantMove,
 }
 
 #[derive(Component, Clone, Default)] // compiler happi
-pub struct MainPlayer;
+pub struct MainPlayer {
+    pub yaw: f32,
+    pub pitch: f32,
+}
+#[derive(Clone, Default)]
+pub struct WantMove {
+    pub x: i8,
+    pub z: i8,
+}
+
+impl WantMove {
+    pub fn new() -> Self {
+        WantMove::default()
+    }
+}
 
 #[derive(TnuaScheme)]
 #[scheme(basis = TnuaBuiltinWalk)]
@@ -50,6 +65,9 @@ fn spawn_player() -> impl Scene {
         Children [
             (
                 Camera3d
+                Transform {
+                    translation: Vec3 { y: 1.0 }
+                }
             )
         ]
     }
