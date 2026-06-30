@@ -20,6 +20,7 @@ pub struct MainPlayer {
 pub struct WantMove {
     pub x: i8,
     pub z: i8,
+    pub jump: bool,
 }
 
 impl WantMove {
