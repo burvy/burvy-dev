@@ -3,16 +3,16 @@ use std::ops::DerefMut;
 use bevy::prelude::*;
 use bevy_tnua::prelude::*;
 
-use super::define::WantMove;
+use super::define::{PlayerData, WantMove};
 
-const SPEED: f32 = 6.7;
-pub const JUMP_VEL: f32 = 17.6867;
+const SPEED: f32 = 5.0;
+pub const JUMP_VEL: f32 = 10.0;
 
 pub fn player_input(
     mut player: Single<
         (
             &mut TnuaController<super::define::PlayerScheme>,
-            &mut super::define::PlayerData,
+            &mut PlayerData,
             &Transform,
         ),
         With<super::define::MainPlayer>,
