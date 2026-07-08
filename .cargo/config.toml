@@ -1,3 +1,5 @@
 # webtransport is unstable in web-sys' eyes
 [target.wasm32-unknown-unknown]
 rustflags = ["--cfg=web_sys_unstable_apis"]
+[build]
+target = "wasm32-unknown-unknown"
