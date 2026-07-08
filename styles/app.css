@@ -80,12 +80,3 @@ Input styles
     background-color: coral;
     color: darkred;
 }
-
-/* test page stuffs */
-
-.player {
-    background-color: aquamarine;
-    position: absolute;
-    width: 20px;
-    height: 20px;
-}

@@ -38,8 +38,15 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "chatroom chat",
         path: "/chat",
     },
+    Experience {
+        name: "Space Photos",
+        background: "images/stars.png",
+        description: "look at cool space photos from NASA!",
+        path: "/space-photos",
+    },
 ];
 
-pub mod chat;
 /// also add the pages here as you add experiences
+pub mod chat;
+pub mod space;
 pub mod test;

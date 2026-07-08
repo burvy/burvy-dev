@@ -15,6 +15,8 @@ pub fn App() -> impl IntoView {
                 <Route path=path!("/") view=pages::home::Home />
                 <Route path=path!("/test") view=experiences::test::Test />
                 <Route path=path!("/chat") view=experiences::chat::Chat />
+                // TODO: change this
+                <Route path=path!("/space-photos") view=experiences::space::SpacePhotos />
             </Routes>
         </Router>
     }

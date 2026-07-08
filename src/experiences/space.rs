@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 
 #[component]
-pub fn Test() -> impl IntoView {
+pub fn SpacePhotos() -> impl IntoView {
     view! { <p>"test"</p> }
 }
