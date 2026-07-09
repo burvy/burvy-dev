@@ -1,5 +1,3 @@
-use leptos::prelude::*;
-
 /// input the location of your sound file `/sounds/your_sound.mp3`
 /// you can assign it to a variable like:
 /// ```
