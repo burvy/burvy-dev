@@ -33,8 +33,8 @@ pub fn SpacePhotos() -> impl IntoView {
 // but we will use this to fetch from APOD
 // where our nasa space images are
 async fn fetch_apod_url() -> Option<String> {
-    let date = "2026-07-08";
-    let key = std::env::var("NASA_KEY").expect("nasa key doesnt exist here");
+    let date = "2026-01-01";
+    let key = option_env!("NASA_KEY").unwrap_or("DEMO_KEY"); // this may potentially still be unsafe
     let url = &format!("https://api.nasa.gov/planetary/apod?api_key={}&date={}", key, date);
     // let resp = gloo_net::http::Request::get(url).send().await; // this and .json() may fail
     let apod = gloo_net::http::Request::get(url) // we turn result into option
