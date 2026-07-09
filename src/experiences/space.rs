@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use js_sys::{Date, Math};
+use super::super::components::sound;
 
 #[derive(serde::Deserialize)]
 struct Apod {
@@ -8,11 +9,7 @@ struct Apod {
 
 #[component]
 pub fn SpacePhotos() -> impl IntoView {
-    let boom_sfx = "sounds/boom.mp3";
-    let play_boom = move || {
-        let _ = web_sys::HtmlAudioElement::new_with_src(boom_sfx)
-            .and_then(|audio| audio.play());
-    };
+    let play_boom = sound::play_sound("/sounds/boom.mp3"); // /sounds/sound.mp3 to play
     Effect::new(move |_| {play_boom();});
     // a value that just changes
     let (reload, set_reload) = signal(false); // arbritrary, just needs to change
@@ -26,7 +23,7 @@ pub fn SpacePhotos() -> impl IntoView {
             // just change the value of reload, any change triggers image reload
             // and_then consumes audio and plays it directly
             <button on:click=move |_| {
-                let _ = play_boom;
+                play_boom();
                 set_reload.update(|n| *n = !*n);
             }>"Click me for a space picture!"</button>
         </div>

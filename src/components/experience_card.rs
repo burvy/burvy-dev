@@ -9,7 +9,11 @@ pub fn ExperienceCard(experience: experiences::Experience) -> impl IntoView {
     view! {
         // TODO: make sure theres a way to get back to the homepage later
         <A href=experience.path>
-            <div class="card" style=format!("background-image: url('{}')", experience.background)>
+            <div
+                on:click=move |_| { todo!() }
+                class="card"
+                style=format!("background-image: url('{}')", experience.background)
+            >
                 <h1>{experience.name}</h1>
                 <p>{experience.description}</p>
             </div>
