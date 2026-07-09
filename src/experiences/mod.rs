@@ -44,9 +44,16 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "look at cool space photos from NASA!",
         path: "/space-photos",
     },
+    Experience {
+        name: "Soundboard",
+        background: "images/stars.png",
+        description: "play some of the sounds i have on this website!",
+        path: "/soundboard",
+    },
 ];
 
 /// also add the pages here as you add experiences
 pub mod chat;
+pub mod soundboard;
 pub mod space;
 pub mod test;
