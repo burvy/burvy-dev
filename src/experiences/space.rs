@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use js_sys::{Date, Math};
 
 #[derive(serde::Deserialize)]
 struct Apod {
@@ -33,7 +34,7 @@ pub fn SpacePhotos() -> impl IntoView {
 // but we will use this to fetch from APOD
 // where our nasa space images are
 async fn fetch_apod_url() -> Option<String> {
-    let date = "2026-01-01";
+    let date = random_apod_date();
     let key = option_env!("NASA_KEY").unwrap_or("DEMO_KEY"); // this may potentially still be unsafe
     let url = &format!("https://api.nasa.gov/planetary/apod?api_key={}&date={}", key, date);
     // let resp = gloo_net::http::Request::get(url).send().await; // this and .json() may fail
@@ -45,5 +46,14 @@ async fn fetch_apod_url() -> Option<String> {
         .await
         .ok()?; // some json parse error
     Some(apod.url)
+}
+
+/// Random date from the start of APOD to now
+fn random_apod_date() -> String {
+    let start = Date::parse("1995-06-16"); // APOD's first day! https://en.wikipedia.org/wiki/Astronomy_Picture_of_the_Day
+    let now = Date::now();
+    let random_date = start + Math::random() * (now - start); // obvious math... random date
+    let iso = Date::new(&random_date.into()).to_iso_string(); // YYYY-MM-DD--...
+    iso.as_string().unwrap_or("1995-06-16".to_string())[..10].to_string()
 
 }
