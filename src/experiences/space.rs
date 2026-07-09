@@ -8,6 +8,12 @@ struct Apod {
 
 #[component]
 pub fn SpacePhotos() -> impl IntoView {
+    let boom_sfx = "sounds/boom.mp3";
+    let play_boom = move || {
+        let _ = web_sys::HtmlAudioElement::new_with_src(boom_sfx)
+            .and_then(|audio| audio.play());
+    };
+    Effect::new(move |_| {play_boom();});
     // a value that just changes
     let (reload, set_reload) = signal(false); // arbritrary, just needs to change
     // LocalResource works better for CSR, it accepts !Send futures.
@@ -18,8 +24,10 @@ pub fn SpacePhotos() -> impl IntoView {
     view! {
         <div>
             // just change the value of reload, any change triggers image reload
+            // and_then consumes audio and plays it directly
             <button on:click=move |_| {
-                set_reload.update(|n| *n = !*n)
+                let _ = play_boom;
+                set_reload.update(|n| *n = !*n);
             }>"Click me for a space picture!"</button>
         </div>
         // div puts it on a new line.
