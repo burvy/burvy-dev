@@ -13,7 +13,7 @@ pub fn SpacePhotos() -> impl IntoView {
     // LocalResource works better for CSR, it accepts !Send futures.
     // this might be of interest: https://book.leptos.dev/async/10_resources.html
     let apod = LocalResource::new(move || {
-        reload.get(); // changing this re runs the closure
+        reload.get(); // changing this re runs the closure, updating the image
         fetch_apod_url()});
     view! {
         <div>
@@ -41,7 +41,7 @@ pub fn SpacePhotos() -> impl IntoView {
 // but we will use this to fetch from APOD
 // where our nasa space images are
 async fn fetch_apod_url() -> Option<String> {
-    let date = random_apod_date();
+    let date = random_apod_date(); // must be formatted like YYYY-MM-DD
     let key = option_env!("NASA_KEY").unwrap_or("DEMO_KEY"); // this may potentially still be unsafe
     let url = &format!("https://api.nasa.gov/planetary/apod?api_key={}&date={}", key, date);
     // let resp = gloo_net::http::Request::get(url).send().await; // this and .json() may fail
@@ -56,6 +56,7 @@ async fn fetch_apod_url() -> Option<String> {
 }
 
 /// Random date from the start of APOD to now
+/// formatted like YYYY-MM-DD (no extra stuff at the end)
 fn random_apod_date() -> String {
     let start = Date::parse("1995-06-16"); // APOD's first day! https://en.wikipedia.org/wiki/Astronomy_Picture_of_the_Day
     let now = Date::now();
