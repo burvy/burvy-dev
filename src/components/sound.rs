@@ -2,11 +2,7 @@
 /// you can assign it to a variable like:
 /// ```
 /// var_sound = play_sound("/sounds/boom.mp3");
-/// var_sound();
-/// ```
-/// or you can do:
-/// ```
-/// play_sound("/sounds/boom.mp3");
+/// var_sound(); // then play it like this
 /// ```
 /// forcing this to implement copy helps with borrow checker errors
 pub fn play_sound(sound: &'static str) -> impl Fn() + Copy {

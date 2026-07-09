@@ -9,8 +9,11 @@ struct Apod {
 
 #[component]
 pub fn SpacePhotos() -> impl IntoView {
-    let play_boom = sound::play_sound("/sounds/boom.mp3"); // /sounds/sound.mp3 to play
-    Effect::new(move |_| {play_boom();});
+    // instance one of using the play_sound api
+    // you can assign it to a variable and reuse this to not load
+    // the sound every time
+    let play_ding = sound::play_sound("/sounds/ding_loud.mp3");
+    Effect::new(move |_| {play_ding();});
     // a value that just changes
     let (reload, set_reload) = signal(false); // arbritrary, just needs to change
     // LocalResource works better for CSR, it accepts !Send futures.
@@ -23,7 +26,7 @@ pub fn SpacePhotos() -> impl IntoView {
             // just change the value of reload, any change triggers image reload
             // and_then consumes audio and plays it directly
             <button on:click=move |_| {
-                play_boom();
+                play_ding();
                 set_reload.update(|n| *n = !*n);
             }>"Click me for a space picture!"</button>
         </div>
