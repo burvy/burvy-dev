@@ -12,7 +12,7 @@ pub fn SpacePhotos() -> impl IntoView {
     // instance one of using the play_sound api
     // you can assign it to a variable and reuse this to not load
     // the sound every time
-    let play_ding = sound::play_sound("/sounds/ding_loud.mp3");
+    let play_ding = sound::play_sound("/sounds/ding.mp3");
     Effect::new(move |_| {play_ding();});
     // a value that just changes
     let (reload, set_reload) = signal(false); // arbritrary, just needs to change
