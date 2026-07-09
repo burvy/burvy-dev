@@ -1,5 +1,10 @@
 use leptos::prelude::*;
 
+#[derive(serde::Deserialize)]
+struct Apod {
+    url: String, // apod returns a json with a few fields
+}
+
 #[component]
 pub fn SpacePhotos() -> impl IntoView {
     // LocalResource works better for CSR, it accepts !Send futures.
@@ -11,6 +16,9 @@ pub fn SpacePhotos() -> impl IntoView {
         </div>
         // div puts it on a new line.
         <div>
+            // Suspense allows us to use async values that might not be ready yet like apod
+            // having the move closure in there also only rerenders the closure not the whole
+            // component which is more efficient.
             <Suspense fallback=move || {
                 view! { <p>"loading pic..."</p> }
             }>{move || apod.get().map(|url| view! { <img src=url alt="space pic!" /> })}</Suspense>
@@ -22,5 +30,10 @@ pub fn SpacePhotos() -> impl IntoView {
 // but we will use this to fetch from APOD
 // where our nasa space images are
 async fn fetch_apod_url() -> String {
-    "https://apod.nasa.gov/apod/image/2607/NGC6769LRGBcropAZ-1500-20-May-2026.jpg".to_string()
+    let date = "2026-07-08";
+    let key = std::env::var("NASA_KEY").expect("nasa key doesnt exist here");
+    let url = &format!("https://api.nasa.gov/planetary/apod?api_key={}&date={}", key, date);
+    let resp = gloo_net::http::Request::get(url).send().await;
+    todo!()
+
 }
