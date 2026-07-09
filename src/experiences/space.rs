@@ -21,7 +21,10 @@ pub fn SpacePhotos() -> impl IntoView {
             // component which is more efficient.
             <Suspense fallback=move || {
                 view! { <p>"loading pic..."</p> }
-            }>{move || apod.get().map(|url| view! { <img src=url alt="space pic!" /> })}</Suspense>
+            }>
+                // flatten the apod Option<Option<_>> to Option<_>
+                {move || apod.get().flatten().map(|url| view! { <img src=url alt="space pic!" /> })}
+            </Suspense>
         </div>
     }
 }
@@ -29,11 +32,18 @@ pub fn SpacePhotos() -> impl IntoView {
 // this is going to fetch from the network eventually
 // but we will use this to fetch from APOD
 // where our nasa space images are
-async fn fetch_apod_url() -> String {
+async fn fetch_apod_url() -> Option<String> {
     let date = "2026-07-08";
     let key = std::env::var("NASA_KEY").expect("nasa key doesnt exist here");
     let url = &format!("https://api.nasa.gov/planetary/apod?api_key={}&date={}", key, date);
-    let resp = gloo_net::http::Request::get(url).send().await;
-    todo!()
+    // let resp = gloo_net::http::Request::get(url).send().await; // this and .json() may fail
+    let apod = gloo_net::http::Request::get(url) // we turn result into option
+        .send()
+        .await
+        .ok()? // some network error
+        .json::<Apod>()
+        .await
+        .ok()?; // some json parse error
+    Some(apod.url)
 
 }
