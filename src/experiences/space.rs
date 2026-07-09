@@ -8,12 +8,19 @@ struct Apod {
 
 #[component]
 pub fn SpacePhotos() -> impl IntoView {
+    // a value that just changes
+    let (reload, set_reload) = signal(false); // arbritrary, just needs to change
     // LocalResource works better for CSR, it accepts !Send futures.
     // this might be of interest: https://book.leptos.dev/async/10_resources.html
-    let apod = LocalResource::new(move || fetch_apod_url());
+    let apod = LocalResource::new(move || {
+        reload.get(); // changing this re runs the closure
+        fetch_apod_url()});
     view! {
         <div>
-            <button>"Click me for a space picture!"</button>
+            // just change the value of reload, any change triggers image reload
+            <button on:click=move |_| {
+                set_reload.update(|n| *n = !*n)
+            }>"Click me for a space picture!"</button>
         </div>
         // div puts it on a new line.
         <div>
