@@ -15,3 +15,10 @@ pub fn SpacePhotos() -> impl IntoView {
         </div>
     }
 }
+
+// this is going to fetch from the network eventually
+// but we will use this to fetch from APOD
+// where our nasa space images are
+async fn fetch_apod_url() -> String {
+    "https://apod.nasa.gov/apod/image/2607/NGC6769LRGBcropAZ-1500-20-May-2026.jpg".to_string()
+}
