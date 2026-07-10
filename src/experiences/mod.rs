@@ -50,10 +50,17 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "play some of the sounds i have on this website!",
         path: "/soundboard",
     },
+    Experience {
+        name: "Cellular Automata",
+        background: "images/stars.png",
+        description: "funny game of life",
+        path: "/life",
+    },
 ];
 
 /// also add the pages here as you add experiences
 pub mod chat;
+pub mod life;
 pub mod soundboard;
 pub mod space;
 pub mod test;
