@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-life-v2 = { path = "../life-v2-web-port" }
+life-v2 = { path = "../life-v2" }
+game = { path = "game"}
 gloo-net = { version = "0.7.0", features = ["json"] }
 js-sys = "0.3.102"
 leptos = { version = "0.8.19", features = ["csr"] }

@@ -46,20 +46,27 @@ pub const EXPERIENCES: &[Experience] = &[
     },
     Experience {
         name: "Soundboard",
-        background: "images/stars.png",
+        background: "images/sound.png",
         description: "play some of the sounds i have on this website!",
         path: "/soundboard",
     },
     Experience {
         name: "Cellular Automata",
-        background: "images/stars.png",
+        background: "images/life.png",
         description: "funny game of life",
         path: "/life",
+    },
+    Experience {
+        name: "Game",
+        background: "images/game.png",
+        description: "game made with bevy on the web",
+        path: "/game",
     },
 ];
 
 /// also add the pages here as you add experiences
 pub mod chat;
+pub mod game;
 pub mod life;
 pub mod soundboard;
 pub mod space;
