@@ -9,15 +9,8 @@ pub fn Life() -> impl IntoView {
     });
 
     view! {
-        <div
-            id="life-canvas"
-            style="
-            width:800px;
-            height:600px;
-            overflow:hidden;
-            "
-        >
-            "Loading..."
+        <div id="life-wrapper">
+            <div id="life-canvas"></div>
         </div>
         <p>"space - pause, left click - birth, right click - kill, scroll - change speed"</p>
     }
