@@ -1,0 +1,12 @@
+# Lets this module be built with a plain `trunk build --release` from this
+# directory. Output goes straight into the site's assets/, where the main
+# build picks it up with copy-dir.
+[build]
+dist = "../../assets/game"
+# the site imports /game/game-wasm.js by a fixed path, so no hashing
+filehash = false
+# integrity hashes are for <script> tags; this is imported dynamically
+no_sri = true
+# park the generated page under a name that isn't index.html, otherwise a
+# request for /game/ would serve this blank stub instead of the SPA
+html_output = "_module.html"
