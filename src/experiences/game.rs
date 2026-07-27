@@ -1,13 +1,14 @@
 use leptos::prelude::*;
 
+use crate::lazy;
+
 #[component]
 pub fn Game() -> impl IntoView {
     let canvas = NodeRef::<leptos::html::Canvas>::new();
 
     Effect::new(move |_| {
-        if let Some(_) = canvas.get() {
-            web_sys::console::log_1(&"Canvas exists!".into());
-            game::run();
+        if canvas.get().is_some() {
+            lazy::start_experience("/game/game-wasm.js");
         }
     });
 

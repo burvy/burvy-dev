@@ -1,5 +1,8 @@
 /target
 dist/
+# build output of the lazy-loaded wasm experiences (see build.sh)
+assets/game/
+assets/life/
 Cargo.lock
 server/target/
 .cargo/

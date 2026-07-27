@@ -1,6 +1,7 @@
 mod app;
 mod components;
 mod experiences;
+mod lazy;
 mod pages;
 mod webtrans;
 

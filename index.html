@@ -2,7 +2,7 @@
 <html>
     <head>
         <title>burvy's site</title>
-        <link data-trunk rel="rust" />
+        <link data-trunk rel="rust" data-wasm-opt="s" data-wasm-opt-params="-all" />
         <!-- copies assets/images folder into dist/images -->
         <link
             data-trunk
@@ -15,6 +15,21 @@
             rel="copy-dir"
             href="assets/sounds"
             data-target-path="sounds"
+        />
+        <!-- lazily-loaded wasm experiences, built by build.sh before this
+             runs. they are fetched on demand by /game and /life, never as
+             part of the initial page load -->
+        <link
+            data-trunk
+            rel="copy-dir"
+            href="assets/game"
+            data-target-path="game"
+        />
+        <link
+            data-trunk
+            rel="copy-dir"
+            href="assets/life"
+            data-target-path="life"
         />
         <link data-trunk rel="css" href="styles/app.css" />
     </head>
