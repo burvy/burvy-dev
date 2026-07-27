@@ -2,7 +2,4 @@
 dist/
 Cargo.lock
 server/target/
-game/
-game/target/
-game/Cargo.lock
 .cargo/
