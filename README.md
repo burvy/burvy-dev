@@ -7,6 +7,10 @@ Also I get to test putting random stuff on websites!!!
 Build with:  
 `./build.ps1`
 
+# Game
+`cd crates/game-wasm`  
+`trunk build --release`
+
 Systems:
 
 Networking:
