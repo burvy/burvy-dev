@@ -5,5 +5,6 @@ use wasm_bindgen::prelude::*;
 /// navigation to /game is harmless.
 #[wasm_bindgen]
 pub fn start() {
-    game::run();
+    // TODO: add an actual digest here
+    game::run(String::new());
 }
