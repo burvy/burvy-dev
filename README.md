@@ -11,6 +11,10 @@ Build with:
 `cd crates/game-wasm`  
 `trunk build --release`
 
+# Cellular Automata
+`cd crates/life-wasm`
+`trunk build --release`
+
 Systems:
 
 Networking:
