@@ -4,7 +4,6 @@ use wasm_bindgen::prelude::*;
 /// `game::run()` already guards against being started twice, so a repeat
 /// navigation to /game is harmless.
 #[wasm_bindgen]
-pub fn start() {
-    // TODO: add an actual digest here
-    game::run(String::new());
+pub fn start(digest: String) {
+    game::run(digest);
 }

@@ -8,7 +8,7 @@ pub fn Game() -> impl IntoView {
 
     Effect::new(move |_| {
         if canvas.get().is_some() {
-            lazy::start_experience("/game/game-wasm.js");
+            lazy::start_experience("/game/game-wasm.js", "/game/digest.txt");
         }
     });
 

@@ -33,14 +33,14 @@ export function import_and_start(url) {
 "#)]
 extern "C" {
     #[wasm_bindgen(catch)]
-    async fn import_and_start(url: &str) -> Result<JsValue, JsValue>;
+    async fn import_and_start(url: &str, digest_url: &'static str) -> Result<JsValue, JsValue>;
 }
 
 /// Loads a lazy wasm experience, logging to the console if it fails rather
 /// than leaving the user staring at a blank canvas with no explanation.
-pub fn start_experience(url: &'static str) {
+pub fn start_experience(url: &'static str, digest_url: &'static str) {
     leptos::task::spawn_local(async move {
-        if let Err(e) = import_and_start(url).await {
+        if let Err(e) = import_and_start(url, digest_url).await {
             web_sys::console::error_2(&format!("failed to load {url}:").into(), &e);
         }
     });
