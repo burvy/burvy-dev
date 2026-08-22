@@ -38,6 +38,8 @@ extern "C" {
 
 /// Loads a lazy wasm experience, logging to the console if it fails rather
 /// than leaving the user staring at a blank canvas with no explanation.
+/// Requires a digest_url primarily for use in `game.rs`, just leave blank
+/// if you do not need it
 pub fn start_experience(url: &'static str, digest_url: &'static str) {
     leptos::task::spawn_local(async move {
         if let Err(e) = import_and_start(url, digest_url).await {

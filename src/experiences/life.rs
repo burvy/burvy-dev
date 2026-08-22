@@ -7,7 +7,7 @@ pub fn Life() -> impl IntoView {
     Effect::new(|_| {
         // winit mounts into #life-canvas, so let the view paint first
         request_animation_frame(|| {
-            lazy::start_experience("/life/life-wasm.js");
+            lazy::start_experience("/life/life-wasm.js", "");
         });
     });
 
