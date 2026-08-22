@@ -1,6 +1,5 @@
 use super::super::components::sound;
 use leptos::prelude::*;
-use leptos_router::components::A;
 
 /// a list of all the sounds
 /// just increment the list size and add more
@@ -9,7 +8,18 @@ const SOUNDS: [&str; 2] = ["sounds/ding.mp3", "sounds/question.mp3"];
 
 #[component]
 pub fn Soundboard() -> impl IntoView {
-    view! { <p>"test"</p> }
+    view! {
+        <p>
+            "test"
+            {SOUNDS
+                .iter()
+                .copied()
+                .map(|path| {
+                    view! { <SoundCard sound=path /> }
+                })
+                .collect::<Vec<_>>()}
+        </p>
+    }
 }
 
 /// repurposing the experience card to make sound cards
