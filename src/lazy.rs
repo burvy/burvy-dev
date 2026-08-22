@@ -12,7 +12,7 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen(inline_js = r#"
 const loaded = new Map();
 
-export function import_and_start(url) {
+export function import_and_start(url, digest_url) {
     let started = loaded.get(url);
     if (!started) {
         started = (async () => {
@@ -21,7 +21,7 @@ export function import_and_start(url) {
             // NEW
             let digest = "";
             if (digest_url) {
-                const res = await fetch(digest_url + "?t=" + Date.now())
+                const res = await fetch(digest_url + "?t=" + Date.now());
                 digest = (await res.text()).trim();
             }
             mod.start(digest);
@@ -33,7 +33,7 @@ export function import_and_start(url) {
 "#)]
 extern "C" {
     #[wasm_bindgen(catch)]
-    async fn import_and_start(url: &str, digest_url: &'static str) -> Result<JsValue, JsValue>;
+    async fn import_and_start(url: &str, digest_url: &str) -> Result<JsValue, JsValue>;
 }
 
 /// Loads a lazy wasm experience, logging to the console if it fails rather
