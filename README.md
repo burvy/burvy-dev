@@ -17,7 +17,8 @@ linking the whole thing into the main bundle, which would cause extremely long i
 loading times.  
 
 `game-wasm` and `life-wasm`, and any other WASMs must be built before the site as `trunk` must 
-copy the built executables into its `dist/`. 
+copy the built executables into its `dist/` through the `game-wasm` `trunk` and then through the 
+main `burvy-dev` `trunk`.
 
 Note that `filehash = false` creates a stale cached `.js` file against the new `.wasm` which gives 
 `LinkError`, but you can get around it by going to `DevTools` (CTRL + SHIFT + I) -> `Network` -> 
