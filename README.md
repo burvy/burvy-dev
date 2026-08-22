@@ -23,7 +23,9 @@ main `burvy-dev` `trunk`.
 Note that `filehash = false` creates a stale cached `.js` file against the new `.wasm` which gives 
 `LinkError`, but you can get around it by going to `DevTools` (CTRL + SHIFT + I) -> `Network` -> 
 `Disable Cache`. The real fix should be implemented in the project itself though, to update the cache 
-without needing to manually disable caching. 
+without needing to manually disable caching.  
+`lazy.rs` imports `/game/game-wasm.js` by a fixed path, the filename, if hashed, would break on 
+each rebuild.
 
 Note that `data-wasm-opt="s"` takes minutes on a large WASM, so `trunk` writes the JS well before the WASM.  
 There is a timestamp gap as a result of this.
