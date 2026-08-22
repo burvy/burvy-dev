@@ -18,7 +18,13 @@ export function import_and_start(url) {
         started = (async () => {
             const mod = await import(url);
             await mod.default();
-            mod.start();
+            // NEW
+            let digest = "";
+            if (digest_url) {
+                const res = await fetch(digest_url + "?t=" + Date.now())
+                digest = (await res.text()).trim();
+            }
+            mod.start(digest);
         })();
         loaded.set(url, started);
     }
