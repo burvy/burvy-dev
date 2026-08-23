@@ -22,7 +22,14 @@ export function import_and_start(url, digest_url) {
             let digest = "";
             if (digest_url) {
                 const res = await fetch(digest_url + "?t=" + Date.now());
-                digest = (await res.text()).trim();
+                const text = (await res.text()).trim();
+                if (!/^[0-9a-f]{64}$/.test(text)) {
+                    throw new Error(
+                        `&{digest_url} did not return a digest` +
+                        `(server running?): ${text.slice(0, 40)}`
+                    );
+                }
+                digest = text;
             }
             mod.start(digest);
         })();
