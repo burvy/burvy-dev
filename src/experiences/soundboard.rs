@@ -4,7 +4,11 @@ use leptos::prelude::*;
 /// a list of all the sounds
 /// just increment the list size and add more
 /// sounds onto it
-const SOUNDS: [&str; 2] = ["sounds/ding.mp3", "sounds/question.mp3"];
+const SOUNDS: [&str; 3] = [
+    "sounds/ding.mp3",
+    "sounds/question.mp3",
+    "sounds/aria-math.mp3",
+];
 
 #[component]
 pub fn Soundboard() -> impl IntoView {
