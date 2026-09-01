@@ -62,12 +62,19 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "game made with bevy on the web",
         path: "/game",
     },
+    Experience {
+        name: "Planner",
+        background: "images/planner.png",
+        description: "a planner app on the web",
+        path: "/planner",
+    },
 ];
 
 /// also add the pages here as you add experiences
 pub mod chat;
 pub mod game;
 pub mod life;
+pub mod planner;
 pub mod soundboard;
 pub mod space;
 pub mod test;
