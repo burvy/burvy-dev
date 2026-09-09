@@ -75,6 +75,7 @@ pub mod chat;
 pub mod game;
 pub mod life;
 pub mod planner;
+pub mod shooter;
 pub mod soundboard;
 pub mod space;
 pub mod test;

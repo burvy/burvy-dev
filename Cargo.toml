@@ -5,7 +5,7 @@ edition = "2024"
 
 # game and life are compiled as standalone wasm crates to import
 [workspace]
-members = ["crates/game-wasm", "crates/life-wasm"]
+members = ["crates/game-wasm", "crates/life-wasm", "crates/shooter-wasm"]
 
 [profile.release]
 lto = "thin"
