@@ -68,6 +68,12 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "a planner app on the web",
         path: "/planner",
     },
+    Experience {
+        name: "Shooter",
+        background: "images/realgame.png",
+        description: "my real actual game",
+        path: "/shooter",
+    },
 ];
 
 /// also add the pages here as you add experiences
