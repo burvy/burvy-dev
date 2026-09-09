@@ -6,3 +6,4 @@ assets/life/
 Cargo.lock
 server/target/
 .cargo/
+assets/shooter/
