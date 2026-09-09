@@ -9,7 +9,8 @@ members = ["crates/game-wasm", "crates/life-wasm", "crates/shooter-wasm"]
 
 [profile.release]
 lto = "thin"
-codegen-units = 1
+# higher codegen-units = slightly less optimization but faster compile times
+codegen-units = 16
 strip = true
 
 [dependencies]
