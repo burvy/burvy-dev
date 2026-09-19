@@ -7,3 +7,5 @@ Cargo.lock
 server/target/
 .cargo/
 assets/shooter/
+assets/floret/
+assets/venture/
