@@ -1,7 +1,7 @@
 # Build every wasm experience by default, or just the ones named:
 # .\build.ps1 -> life, game, shooter
 # .\build.ps1 shooter-wasm -> shooter only, other two keep their output
-param([string[]] $Modules = @('life-wasm', 'game-wasm', 'shooter-wasm', 'floret-wasm'))
+param([string[]] $Modules = @('life-wasm', 'game-wasm', 'shooter-wasm', 'floret-wasm', 'venture-wasm'))
 
 Set-Location $PSScriptRoot
 

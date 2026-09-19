@@ -39,3 +39,61 @@ Systems:
 Networking:
 [WebTransport Server](docs/webtransport-server.md)
 [WebTransport Client](docs/webtransport-client.md)
+
+# Adding Items
+To add a new big item, follow this checklist, and note, replace `<!name!> 
+with your crate name (<!Name!> is your crate name but capitalized):
+
+1. In the source crate, you must have a reusable entrypoint. For example, `run()` in your `lib.rs`. 
+The `crate-type` must also be set to `rlib` so other crates can depend on it as a library.  
+
+2. Create a new wrapper crate in `burvy-dev/crates/<!name!>-wasm`  
+- `Cargo.toml`: `[lib] crate-type = ["cdylib"]`, dependencies: `<!name!> = { path = "../../../<!name!>" }` + `wasm-bindgen`.
+Note that if you aren't me, the path is different. This would still be correct if you keep your project folders next to 
+each other like I do.  
+- `src/lib.rs`:
+```rust
+#[wasm_bindgen]
+pub fn start() {
+    <!name!>::run();
+}
+```  
+- `Trunk.toml`: `dist = "../../assets/<!name!>"`, `filehash = false`, `no_sri = true`, `html_output = "_module.html"`.  
+
+3. Add `"crates/<!name!>-wasm"` to `[workspace] members` in `Cargo.toml` in the root site  
+Also add `<!name!>-wasm` to the `$Modules` array in `build.ps1` (and the dist-listing line if you want).  
+
+4. Do these steps for the UI:
+- New file `src/experiences/<!name!>.rs`: 
+```rust
+use leptos::prelude::*;
+
+use crate::lazy;
+
+#[component]
+pub fn <!Name!>() -> impl IntoView {
+    let canvas = NodeRef::<leptos::html::Canvas>::new();
+
+    Effect::new(move |_| {
+        if canvas.get().is_some() {
+            lazy::start_experience("/<!name!>/<!name!>-wasm.js");
+        }
+    });
+
+    view! {
+        <div id="game-wrapper"> // game-wrapper fills the page
+            <canvas node_ref=canvas id="<!name!>-canvas">
+                "Loading..."
+            </canvas>
+        </div>
+    }
+}
+```  
+
+- Your crate must target the canvas we created, `id="<!name!>-canvas"`.  
+For example, through `canvas-parent: Some("life-canvas".to_string())` like in `life-v2`.  
+- Register the module: `pub mod <!name!>;` in `src/experiences/mod.rs`  
+- Add an entry to the `EXPERIENCES` const array at the top of that `mod.rs`  
+- You must draw an image, my convention is `2000x1000`. That is put in `assets/images`  
+- Register a route in `src/app/app.rs`: `<Route path=path!("/<!name!>") 
+view=experiences::<!name!>::<!Name!> />`

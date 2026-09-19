@@ -25,6 +25,7 @@ pub fn App() -> impl IntoView {
                 <Route path=path!("/shooter") view=experiences::shooter::Shooter />
                 <Route path=path!("/planner") view=experiences::planner::Planner />
                 <Route path=path!("/floret") view=experiences::floret::Floret />
+                <Route path=path!("/venture") view=experiences::venture::Venture />
             </Routes>
         </Router>
     }

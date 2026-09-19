@@ -6,7 +6,7 @@ pub struct Experience {
     pub description: &'static str,
     // this must be set in `app.rs`
     pub path: &'static str,
-    // the image card size is h: 1, w: 4, paint is good, 2000x500
+    // the image card size is h: 1, w: 2, paint is good, 2000x1000
     pub background: &'static str,
 }
 
@@ -27,8 +27,7 @@ pub const EXPERIENCES: &[Experience] = &[
     },
     Experience {
         name: "StatesMC Website",
-        description:
-            "the website for my minecraft server - the only one with guns for java edition!",
+        description: "the website for my minecraft server - the only one with guns for java edition!",
         path: "https://statesmc.us/",
         background: "images/mwg.png",
     },
@@ -80,6 +79,12 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "a little hangout space! walk around and talk to whoever is on",
         path: "/floret",
     },
+    Experience {
+        name: "Venture",
+        background: "images/venture.png",
+        description: "a singleplayer battle simulator!",
+        path: "/venture",
+    },
 ];
 
 /// also add the pages here as you add experiences
@@ -92,3 +97,4 @@ pub mod shooter;
 pub mod soundboard;
 pub mod space;
 pub mod test;
+pub mod venture;
