@@ -9,3 +9,5 @@ server/target/
 assets/shooter/
 assets/floret/
 assets/venture/
+deploy/
+dev-servers/
