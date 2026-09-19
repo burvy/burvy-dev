@@ -76,7 +76,7 @@ pub const EXPERIENCES: &[Experience] = &[
     },
     Experience {
         name: "Floret",
-        background: "images/question.png",
+        background: "images/floret.png",
         description: "a little hangout space! walk around and talk to whoever is on",
         path: "/floret",
     },
