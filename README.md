@@ -6,8 +6,15 @@ Also I get to test putting random stuff on websites!!!
 # Building
 To build quickly:
 `.\build.ps1`  
-To build a release build:
-`.\build.ps1 -Deploy`
+To build a release build (site + burvy-dev's own `server.exe`, gathered into `deploy\`):
+`.\build.ps1 -Deploy`  
+To test locally against `http://localhost:8080` (also gathers every linked project's dev-build
+server executable into `dev-servers\`, so you can run whichever one you're testing):
+`.\build.ps1 -Dev`
+
+Per-project multiplayer servers (`shooter-server`, `floret-server`, ...) still ship for real
+through each project's own `go.ps1 -release`, which calls this script for just its wasm module.
+`-Deploy`/`-Dev` here only cover what burvy-dev itself owns (the site, and its own server).
 
 # Game
 `cd crates/game-wasm`  
@@ -92,8 +99,11 @@ pub fn <!Name!>() -> impl IntoView {
 }
 ```  
 
-- Your crate must target the canvas we created, `id="<!name!>-canvas"`.  
-For example, through `canvas-parent: Some("life-canvas".to_string())` like in `life-v2`.  
+- This template is for **Bevy-based** experiences (`game`, `shooter`, `floret`), where Bevy's
+winit integration looks up an *existing* `<canvas>` element by id.  
+For a **raw `winit`+`pixels`** crate (`life-v2`, `venture`), don't create a `<canvas>` at all -
+winit creates and appends its own. Use a plain `<div id="game-wrapper"></div>` instead, and set
+`canvas_parent: Some("game-wrapper".to_string())` on that crate's `App` (see `life-v2`/`venture`).  
 - Register the module: `pub mod <!name!>;` in `src/experiences/mod.rs`  
 - Add an entry to the `EXPERIENCES` const array at the top of that `mod.rs`  
 - You must draw an image, my convention is `2000x1000`. That is put in `assets/images`  
