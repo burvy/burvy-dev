@@ -4,8 +4,10 @@ A site to showcase a bunch of stuff in Rust
 Also I get to test putting random stuff on websites!!!
 
 # Building
-Build with:  
-`./build.ps1`
+To build quickly:
+`.\build.ps1`  
+To build a release build:
+`.\build.ps1 -Deploy`
 
 # Game
 `cd crates/game-wasm`  
@@ -40,7 +42,7 @@ Networking:
 [WebTransport Server](docs/webtransport-server.md)
 [WebTransport Client](docs/webtransport-client.md)
 
-# Adding Items
+# Adding Items From Other Crates
 To add a new big item, follow this checklist, and note, replace `<!name!> 
 with your crate name (<!Name!> is your crate name but capitalized):
 
@@ -97,3 +99,13 @@ For example, through `canvas-parent: Some("life-canvas".to_string())` like in `l
 - You must draw an image, my convention is `2000x1000`. That is put in `assets/images`  
 - Register a route in `src/app/app.rs`: `<Route path=path!("/<!name!>") 
 view=experiences::<!name!>::<!Name!> />`
+
+# Adding Normal Leptos Items Natively
+The process is similar for adding normal leptos items.
+
+1. Copy `test.rs` in `src/experiences` as a template for the leptos item, 
+rename the file to `<!name!>` and the function inside to `<!Name!>`.
+
+2. Add the item in `mod.rs` as an import and an `Experience` in `EXPERIENCES`.
+
+3. Add the item as a new link in `src/app/app.rs`
