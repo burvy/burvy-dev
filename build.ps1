@@ -1,7 +1,7 @@
 # Build every wasm experience by default, or just the ones named:
 # .\build.ps1 -> life, game, shooter
 # .\build.ps1 shooter-wasm -> shooter only, other two keep their output
-param([string[]] $Modules = @('life-wasm', 'game-wasm', 'shooter-wasm'))
+param([string[]] $Modules = @('life-wasm', 'game-wasm', 'shooter-wasm', 'floret-wasm'))
 
 Set-Location $PSScriptRoot
 
@@ -26,5 +26,5 @@ trunk build --release
 if ($LASTEXITCODE -ne 0) { throw "site build failed" }
 
 Write-Host "`ndist/ is ready to deploy:"
-Get-ChildItem dist\*.wasm, dist\game\*.wasm, dist\life\*.wasm, dist\shooter\*.wasm |
+Get-ChildItem dist\*.wasm, dist\game\*.wasm, dist\life\*.wasm, dist\shooter\*.wasm, dist\floret\*.wasm |
     ForEach-Object { "  {0,-22} {1,8:N1} MB" -f $_.Name, ($_.Length / 1MB) }

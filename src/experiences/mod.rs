@@ -74,10 +74,17 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "my real actual game",
         path: "/shooter",
     },
+    Experience {
+        name: "Floret",
+        background: "images/question.png",
+        description: "a little hangout space! walk around and talk to whoever is on",
+        path: "/floret",
+    },
 ];
 
 /// also add the pages here as you add experiences
 pub mod chat;
+pub mod floret;
 pub mod game;
 pub mod life;
 pub mod planner;
