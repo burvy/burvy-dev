@@ -5,7 +5,7 @@ assets/game/
 assets/life/
 Cargo.lock
 server/target/
-.cargo/
+/.cargo/
 assets/shooter/
 assets/floret/
 assets/venture/

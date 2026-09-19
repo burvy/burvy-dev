@@ -100,7 +100,7 @@ if ($Deploy) {
     New-Item -ItemType Directory -Path "$deployDir\site" -Force | Out-Null
 
     Copy-Item -Recurse -Force "dist\*" "$deployDir\site\"
-    Copy-Item -Force "server\target\release\server.exe" "$deployDir\server.exe"
+    Copy-Item -Force "server\target\x86_64-pc-windows-msvc\release\server.exe" "$deployDir\server.exe"
 
     Write-Host "`nDeploy folder ready at $deployDir\"
     Write-Host "Note: server.exe expects certs at C:\burvy\certs\webtrans.burvy.dev\ on the target machine - not included here, on purpose."
@@ -128,7 +128,7 @@ if ($Dev) {
     $ok = ($LASTEXITCODE -eq 0)
     Pop-Location
     if (-not $ok) { throw "server build failed" }
-    Copy-Item -Force 'server\target\debug\server.exe' (Join-Path $devDir 'server.exe')
+    Copy-Item -Force 'server\target\x86_64-pc-windows-msvc\debug\server.exe' (Join-Path $devDir 'server.exe')
 
     foreach ($linked in $LinkedServers) {
         if ($Servers -notcontains $linked.Project) { continue }

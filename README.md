@@ -4,13 +4,20 @@ A site to showcase a bunch of stuff in Rust
 Also I get to test putting random stuff on websites!!!
 
 # Building
-To build quickly:
+To build quickly:  
 `.\build.ps1`  
-To build a release build (site + burvy-dev's own `server.exe`, gathered into `deploy\`):
+To build a release build (site + burvy-dev's own `server.exe`, gathered into `deploy\`):  
 `.\build.ps1 -Deploy`  
 To test locally against `http://localhost:8080` (also gathers every linked project's dev-build
-server executable into `dev-servers\`, so you can run whichever one you're testing):
-`.\build.ps1 -Dev`
+server executable into `dev-servers\`, so you can run whichever one you're testing):  
+`.\build.ps1 -Dev`  
+
+To only build one wasm:  
+`.\build.ps1 <!name!>-wasm`  
+
+If you're only working on the site, honestly just use:  
+`trunk serve`  
+This just won't build the linked crates at all.
 
 Per-project multiplayer servers (`shooter-server`, `floret-server`, ...) still ship for real
 through each project's own `go.ps1 -release`, which calls this script for just its wasm module.

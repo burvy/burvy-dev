@@ -1,0 +1,6 @@
+# burvy-dev/.cargo/config.toml pins the parent workspace to wasm32-unknown-unknown
+# for the site, but Cargo's config discovery walks up the directory tree regardless
+# of Cargo.toml workspace boundaries - server is a native binary and needs its own
+# override back to the host target, or it inherits the site's wasm32 default.
+[build]
+target = "x86_64-pc-windows-msvc"
