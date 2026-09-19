@@ -65,7 +65,10 @@ function Build-LinkedServers {
             continue
         }
 
-        $cargoArgs = if ($Release) { @('--release') } else { @($linked.DevArgs) }
+        # wrapped in @(...) so a single-element result stays an array instead of
+        # collapsing to a bare string - splatting a scalar string enumerates it
+        # character by character, which cargo sees as a run of single-dash args
+        $cargoArgs = @(if ($Release) { '--release' } else { $linked.DevArgs })
 
         Write-Host "`n==> building $($linked.Package) ($profileDir)" -ForegroundColor Cyan
         $sw = [System.Diagnostics.Stopwatch]::StartNew()
