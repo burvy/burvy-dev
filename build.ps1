@@ -105,7 +105,7 @@ foreach ($module in $Modules) {
 foreach ($module in $Modules) {
     Time-Step $module {
         Push-Location "crates\$module"
-        trunk build --release
+        trunk build --release -v
         Pop-Location
         if ($LASTEXITCODE -ne 0) { throw "$module build failed" }
     }
@@ -115,7 +115,7 @@ if (-not $Dev) {
     # -Dev serves instead of building the site here (see below) so it can watch
     # for changes; every other mode just needs a one-shot build.
     Time-Step 'site' {
-        trunk build --release
+        trunk build --release -v
         if ($LASTEXITCODE -ne 0) { throw "site build failed" }
     }
 }
@@ -164,7 +164,7 @@ if ($Dev) {
     Write-Host "`n==> starting local site server" -ForegroundColor Cyan
     Start-Process pwsh -ArgumentList @(
         '-NoExit', '-Command',
-        "Set-Location '$PSScriptRoot'; trunk serve --release"
+        "Set-Location '$PSScriptRoot'; trunk serve --release -v"
     )
     Start-Sleep -Seconds 2
     Start-Process 'http://localhost:8080'

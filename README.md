@@ -79,7 +79,12 @@ pub fn start() {
 3. Add `"crates/<!name!>-wasm"` to `[workspace] members` in `Cargo.toml` in the root site  
 Also add `<!name!>-wasm` to the `$Modules` array in `build.ps1` (and the dist-listing line if you want).  
 
-4. Do these steps for the UI:
+4. Add a `copy-dir` entry for it in `index.html` (next to the other experiences' entries),
+`href="assets/<!name!>"` and `data-target-path="<!name!>"`. **Easy to forget, and skipping it
+means trunk never copies the built wasm into `dist/`** - the page 404s on `/<!name!>/<!name!>-wasm.js`
+even though everything else (workspace member, build.ps1) is correctly wired.  
+
+5. Do these steps for the UI:
 - New file `src/experiences/<!name!>.rs`: 
 ```rust
 use leptos::prelude::*;
