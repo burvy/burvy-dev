@@ -134,3 +134,10 @@ rename the file to `<!name!>` and the function inside to `<!Name!>`.
 2. Add the item in `mod.rs` as an import and an `Experience` in `EXPERIENCES`.
 
 3. Add the item as a new link in `src/app/app.rs`
+
+# Adding Godot Games
+1. Export from godot straight to `assets/`
+2. Add a `copy-dir` trunk link to the godot thing in assets
+3. `src/experiences/<!name!>.rs`, copy `learn3d.rs`
+4. Add the experience in `mod.rs` in `experiences`
+5. Route it in `app.rs` in `app/`

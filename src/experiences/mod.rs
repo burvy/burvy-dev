@@ -92,12 +92,19 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "learning 3D in godot",
         path: "/3d-learn",
     },
+    Experience {
+        name: "Halcyon",
+        background: "images/halcyon.png",
+        description: "a real multiplayer game iterated quickly in godot",
+        path: "/halcyon",
+    },
 ];
 
 /// also add the pages here as you add experiences
 pub mod chat;
 pub mod floret;
 pub mod game;
+pub mod halcyon;
 pub mod learn3d;
 pub mod life;
 pub mod planner;
