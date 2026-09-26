@@ -27,7 +27,8 @@ pub const EXPERIENCES: &[Experience] = &[
     },
     Experience {
         name: "StatesMC Website",
-        description: "the website for my minecraft server - the only one with guns for java edition!",
+        description:
+            "the website for my minecraft server - the only one with guns for java edition!",
         path: "https://statesmc.us/",
         background: "images/mwg.png",
     },
@@ -85,12 +86,19 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "a singleplayer battle simulator!",
         path: "/venture",
     },
+    Experience {
+        name: "Godot Game",
+        background: "images/3d-learn.png",
+        description: "learning 3D in godot",
+        path: "/3d-learn",
+    },
 ];
 
 /// also add the pages here as you add experiences
 pub mod chat;
 pub mod floret;
 pub mod game;
+pub mod learn3d;
 pub mod life;
 pub mod planner;
 pub mod shooter;

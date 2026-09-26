@@ -19,6 +19,9 @@ If you're only working on the site, honestly just use:
 `trunk serve`  
 This just won't build the linked crates at all.
 
+If you are importing Godot games, just do:  
+`trunk build --release`
+
 Per-project multiplayer servers (`shooter-server`, `floret-server`, ...) still ship for real
 through each project's own `go.ps1 -release`, which calls this script for just its wasm module.
 `-Deploy`/`-Dev` here only cover what burvy-dev itself owns (the site, and its own server).
