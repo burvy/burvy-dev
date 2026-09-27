@@ -69,22 +69,10 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/planner",
     },
     Experience {
-        name: "Amity",
-        background: "images/amity.png",
-        description: "an FPS game based around open world exploration in a voxel enviroment",
-        path: "/amity",
-    },
-    Experience {
         name: "Floret",
         background: "images/floret.png",
         description: "a little hangout space! walk around and talk to whoever is on",
         path: "/floret",
-    },
-    Experience {
-        name: "Venture",
-        background: "images/venture.png",
-        description: "a singleplayer battle simulator!",
-        path: "/venture",
     },
     Experience {
         name: "Godot Game",
@@ -93,10 +81,22 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/3d-learn",
     },
     Experience {
+        name: "Venture",
+        background: "images/venture.png",
+        description: "a singleplayer battle simulator!",
+        path: "/venture",
+    },
+    Experience {
         name: "Halcyon",
         background: "images/halcyon.png",
         description: "a real multiplayer game iterated quickly in godot",
         path: "/halcyon",
+    },
+    Experience {
+        name: "Amity",
+        background: "images/amity.png",
+        description: "an FPS game based around open world exploration in a voxel enviroment",
+        path: "/amity",
     },
 ];
 
