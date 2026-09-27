@@ -22,7 +22,7 @@ This just won't build the linked crates at all.
 If you are importing Godot games, just do:  
 `trunk build --release`
 
-Per-project multiplayer servers (`shooter-server`, `floret-server`, ...) still ship for real
+Per-project multiplayer servers (`amity-server`, `floret-server`, ...) still ship for real
 through each project's own `go.ps1 -release`, which calls this script for just its wasm module.
 `-Deploy`/`-Dev` here only cover what burvy-dev itself owns (the site, and its own server).
 
@@ -114,7 +114,7 @@ pub fn <!Name!>() -> impl IntoView {
 }
 ```  
 
-- This template is for **Bevy-based** experiences (`game`, `shooter`, `floret`), where Bevy's
+- This template is for **Bevy-based** experiences (`game`, `amity`, `floret`), where Bevy's
 winit integration looks up an *existing* `<canvas>` element by id.  
 For a **raw `winit`+`pixels`** crate (`life-v2`, `venture`), don't create a `<canvas>` at all -
 winit creates and appends its own. Use a plain `<div id="game-wrapper"></div>` instead, and set

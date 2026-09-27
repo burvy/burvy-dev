@@ -1,10 +1,10 @@
 # Build every wasm experience by default, or just the ones named:
-# .\build.ps1                -> life, game, shooter, floret, venture (site only)
-# .\build.ps1 shooter-wasm   -> shooter only, other experiences keep their output
+# .\build.ps1                -> life, amity, floret, venture (site only)
+# .\build.ps1 amity-wasm     -> amity only, other experiences keep their output
 # .\build.ps1 -Deploy        -> everything: all wasm modules + site + burvy-dev's own
 #                               server.exe + a RELEASE build of every linked project's
-#                               server (shooter-server, floret-server, game-server from
-#                               web-fps), timed, all gathered into one deploy\ folder
+#                               server (amity-server, floret-server), timed, all
+#                               gathered into one deploy\ folder
 #                               ready to copy to the server machine
 # .\build.ps1 -Dev           -> serves the site on http://localhost:8080 and gathers
 #                               every linked project's DEV-build server executable
@@ -16,8 +16,8 @@
 # redeploying just that one game without touching the rest of the site) - -Deploy
 # here just builds the same release binaries itself so everything lands in one place.
 param(
-    [string[]] $Modules = @('life-wasm', 'game-wasm', 'shooter-wasm', 'floret-wasm', 'venture-wasm'),
-    [string[]] $Servers = @('burvy-game', 'floret', 'web-fps'),
+    [string[]] $Modules = @('life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm'),
+    [string[]] $Servers = @('amity', 'floret'),
     [switch] $Deploy,
     [switch] $Dev
 )
@@ -31,14 +31,13 @@ if ($env:NO_COLOR) { $env:NO_COLOR = 'true' }
 # builds always just use --release, no per-project flags needed there.
 # Add new entries here as new linked projects grow a server of their own.
 $LinkedServers = @(
-    @{ Project = 'burvy-game'; Package = 'shooter-server'; DevArgs = @('--features', 'dev-local') },
-    @{ Project = 'floret';     Package = 'floret-server';  DevArgs = @('--features', 'dev-local') },
-    @{ Project = 'web-fps';    Package = 'game-server';    DevArgs = @() }
+    @{ Project = 'amity';      Package = 'amity-server';   DevArgs = @('--features', 'dev-local') },
+    @{ Project = 'floret';     Package = 'floret-server';  DevArgs = @('--features', 'dev-local') }
 )
 
 if ($Deploy -or $Dev) {
     # a full build always rebuilds every wasm module, not just the ones named
-    $Modules = @('life-wasm', 'game-wasm', 'shooter-wasm', 'floret-wasm', 'venture-wasm')
+    $Modules = @('life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm')
 }
 
 $timings = [ordered]@{}
@@ -123,7 +122,7 @@ if (-not $Dev) {
 if ($Deploy) {
     $deployDir = "deploy"
     Remove-Item -Recurse -Force $deployDir -ErrorAction SilentlyContinue
-    New-Item -ItemType Directory -Path "$deployDir\site" -Force | Out-Null
+    New-Item -ItemType Directory -Path "$deployDir\dist" -Force | Out-Null
 
     Time-Step 'burvy-dev/server' {
         Push-Location 'server'
@@ -146,14 +145,14 @@ Write-Host ("  {0,-20} {1,8:N1}s" -f 'TOTAL', $overall.Elapsed.TotalSeconds)
 
 if (-not $Dev) {
     Write-Host "`ndist/ is ready:"
-    Get-ChildItem dist\*.wasm, dist\game\*.wasm, dist\life\*.wasm, dist\shooter\*.wasm, dist\floret\*.wasm, dist\venture\*.wasm -ErrorAction SilentlyContinue |
+    Get-ChildItem dist\*.wasm, dist\life\*.wasm, dist\amity\*.wasm, dist\floret\*.wasm, dist\venture\*.wasm -ErrorAction SilentlyContinue |
         ForEach-Object { "  {0,-22} {1,8:N1} MB" -f $_.Name, ($_.Length / 1MB) }
 }
 
 if ($Deploy) {
-    Copy-Item -Recurse -Force "dist\*" "$deployDir\site\"
+    Copy-Item -Recurse -Force "dist\*" "$deployDir\dist\"
 
-    Write-Host "`nDeploy folder ready at $deployDir\ (site\, server.exe, and every linked project's server.exe)"
+    Write-Host "`nDeploy folder ready at $deployDir\ (dist\, server.exe, and every linked project's server.exe)"
     Write-Host "Note: server.exe expects certs at C:\burvy\certs\webtrans.burvy.dev\ on the target machine - not included here, on purpose."
     Write-Host "Each project's own go.ps1 -release still works standalone if you only want to redeploy one game."
 

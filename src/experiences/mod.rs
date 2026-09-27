@@ -69,10 +69,10 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/planner",
     },
     Experience {
-        name: "VoxelStates",
-        background: "images/realgame.png",
+        name: "Amity",
+        background: "images/amity.png",
         description: "an FPS game based around open world exploration in a voxel enviroment",
-        path: "/shooter",
+        path: "/amity",
     },
     Experience {
         name: "Floret",
@@ -101,6 +101,7 @@ pub const EXPERIENCES: &[Experience] = &[
 ];
 
 /// also add the pages here as you add experiences
+pub mod amity;
 pub mod chat;
 pub mod floret;
 pub mod game;
@@ -108,7 +109,6 @@ pub mod halcyon;
 pub mod learn3d;
 pub mod life;
 pub mod planner;
-pub mod shooter;
 pub mod soundboard;
 pub mod space;
 pub mod test;

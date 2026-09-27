@@ -6,7 +6,7 @@ assets/life/
 Cargo.lock
 server/target/
 /.cargo/
-assets/shooter/
+assets/amity/
 assets/floret/
 assets/venture/
 deploy/

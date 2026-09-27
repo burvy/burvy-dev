@@ -1,5 +1,5 @@
 [package]
-name = "shooter-wasm"
+name = "amity-wasm"
 version = "0.1.0"
 edition = "2024"
 
@@ -9,7 +9,7 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
-shooter = { path = "../../../burvy-game" }
+amity = { path = "../../../amity" }
 wasm-bindgen = "0.2.125"
 
 # bevy pulls these in and both refuse to build for wasm without their backend
