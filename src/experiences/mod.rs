@@ -59,7 +59,7 @@ pub const EXPERIENCES: &[Experience] = &[
     Experience {
         name: "Game",
         background: "images/game.png",
-        description: "game made with bevy on the web",
+        description: "DISCONTINUED (old web game)",
         path: "/game",
     },
     Experience {
@@ -69,9 +69,9 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/planner",
     },
     Experience {
-        name: "Shooter",
+        name: "VoxelStates",
         background: "images/realgame.png",
-        description: "my real actual game",
+        description: "an FPS game based around open world exploration in a voxel enviroment",
         path: "/shooter",
     },
     Experience {
