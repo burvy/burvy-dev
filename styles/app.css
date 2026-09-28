@@ -100,13 +100,58 @@ Input styles
 
 .loading-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    font-size: 64px;
+    inset: 0;
+    z-index: 1; /* above the canvas */
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    z-index: 1; /* Places it relative to the canvas */
+    gap: 1.25rem;
+    background: #111316;
+    color: #e8e6e3;
+    transition: opacity 0.4s ease;
+}
+/* fading out once the game runs: lets clicks through straight away (every
+   child too: `*` above turns pointer events back on) */
+.loading-overlay.done,
+.loading-overlay.done * {
+    opacity: 0;
+    pointer-events: none;
+}
+.loading-title {
+    font-size: 3.5rem;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+}
+.loading-bar {
+    position: relative;
+    width: min(360px, 70vw);
+    height: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.12);
+}
+.loading-bar-fill {
+    width: 0;
+    height: 100%;
+    border-radius: 3px;
+    background: #e8c060;
+    transition: width 0.2s ease;
+}
+/* size unknown: a short piece sweeps across instead */
+.loading-bar.indeterminate .loading-bar-fill {
+    width: 30%;
+    animation: loading-sweep 1.2s ease-in-out infinite;
+}
+@keyframes loading-sweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(340%); }
+}
+.loading-detail {
+    font-size: 0.95rem;
+    opacity: 0.7;
+}
+.loading-overlay.failed .loading-detail {
+    opacity: 1;
+    color: #ff8a80;
 }

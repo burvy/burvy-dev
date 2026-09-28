@@ -1,25 +1,9 @@
 use leptos::prelude::*;
 
-use crate::lazy;
+use crate::components::WasmExperience;
 
-/// The hangout. Reuses `#game-wrapper` so the canvas fills the page the same way
-/// the other bevy experiences do.
+/// The hangout
 #[component]
 pub fn Floret() -> impl IntoView {
-    let canvas = NodeRef::<leptos::html::Canvas>::new();
-
-    // Wait for the canvas to exist before starting: bevy looks it up by id, and
-    // starting first means it finds nothing and falls back to its own window.
-    Effect::new(move |_| {
-        if canvas.get().is_some() {
-            lazy::start_experience("/floret/floret-wasm.js");
-        }
-    });
-
-    view! {
-        <div id="game-wrapper" style="position: relative;">
-            <div class="loading-overlay">"Loading..."</div>
-            <canvas node_ref=canvas id="floret-canvas"></canvas>
-        </div>
-    }
+    view! { <WasmExperience title="Floret" script="/floret/floret-wasm.js" canvas_id="floret-canvas" /> }
 }

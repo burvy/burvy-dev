@@ -1,21 +1,8 @@
 use leptos::prelude::*;
 
-use crate::lazy;
+use crate::components::WasmExperience;
 
 #[component]
 pub fn Game() -> impl IntoView {
-    let canvas = NodeRef::<leptos::html::Canvas>::new();
-
-    Effect::new(move |_| {
-        if canvas.get().is_some() {
-            lazy::start_experience("/game/game-wasm.js");
-        }
-    });
-
-    view! {
-        <div id="game-wrapper" style="position: relative;">
-            <div class="loading-overlay">"Loading..."</div>
-            <canvas node_ref=canvas id="game-canvas"></canvas>
-        </div>
-    }
+    view! { <WasmExperience title="Game" script="/game/game-wasm.js" canvas_id="game-canvas" /> }
 }
