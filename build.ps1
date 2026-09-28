@@ -1,43 +1,57 @@
-# Build every wasm experience by default, or just the ones named:
-# .\build.ps1                -> life, amity, floret, venture (site only)
-# .\build.ps1 amity-wasm     -> amity only, other experiences keep their output
-# .\build.ps1 -Deploy        -> everything: all wasm modules + site + burvy-dev's own
-#                               server.exe + a RELEASE build of every linked project's
-#                               server (amity-server, floret-server), timed, all
-#                               gathered into one deploy\ folder
-#                               ready to copy to the server machine
-# .\build.ps1 -Dev           -> serves the site on http://localhost:8080 and gathers
-#                               every linked project's DEV-build server executable
-#                               (each project's own DevArgs, e.g. --features dev-local -
-#                               see $LinkedServers) into dev-servers\, so you can run
-#                               whichever one you're testing against the live site
+# Builds the site, its wasm experiences, and the multiplayer servers.
 #
-# Each linked project's own go.ps1 -release still works standalone (useful for
-# redeploying just that one game without touching the rest of the site) - -Deploy
-# here just builds the same release binaries itself so everything lands in one place.
+#   .\build.ps1                     every wasm module, then the site, into dist\
+#   .\build.ps1 amity-wasm          just amity's module (the others keep their
+#                                   last build), then the site
+#   .\build.ps1 -Modules @()        no modules, just the site (e.g. after a site-only
+#                                   change: the modules already built are reused)
+#
+#   .\build.ps1 -Deploy             everything, gathered into deploy\ to copy to the
+#                                   server machine as is:
+#                                       deploy\burvy-dev\dist\   the site
+#                                       deploy\server.exe        the chat server
+#                                       deploy\amity-server.exe
+#                                       deploy\floret-server.exe
+#                                   Servers are RELEASE builds. Add -Modules to rebuild
+#                                   only some modules (-Modules @() for none: the
+#                                   modules already built go in)
+#   .\build.ps1 -Deploy -Servers amity    only some servers (chat, amity, floret)
+#
+#   .\build.ps1 -Dev                serves the site on http://localhost:8080 and
+#                                   gathers every server's DEV build (with its dev
+#                                   flags, see $ServerList) into dev-servers\, to run
+#                                   whichever one you're testing against it
+#
+# Certificates are never copied: server.exe expects C:\burvy\certs\webtrans.burvy.dev\,
+# and each game server its own (see that project), on the machine they run on.
+# Each linked project's own go.ps1 -release still works standalone, for redeploying
+# one game without touching the rest.
 param(
     [string[]] $Modules = @('life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm'),
-    [string[]] $Servers = @('amity', 'floret'),
+    [string[]] $Servers = @('chat', 'amity', 'floret'),
     [switch] $Deploy,
     [switch] $Dev
 )
 
+$ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
+# trunk only accepts true or false here, while other tools accept anything
 if ($env:NO_COLOR) { $env:NO_COLOR = 'true' }
 
-# Every linked project with its own multiplayer server. DevArgs is whatever extra
-# cargo flags that project's own dev build needs (e.g. a dev-local feature) - release
-# builds always just use --release, no per-project flags needed there.
-# Add new entries here as new linked projects grow a server of their own.
-$LinkedServers = @(
-    @{ Project = 'amity';      Package = 'amity-server';   DevArgs = @('--features', 'dev-local') },
-    @{ Project = 'floret';     Package = 'floret-server';  DevArgs = @('--features', 'dev-local') }
+# Every server: burvy-dev's own chat server, and each linked project's game server.
+# Dir is relative to this repo. DevArgs are the extra cargo flags its dev build
+# needs (release builds just use --release). Add new servers here.
+$ServerList = @(
+    @{ Name = 'chat';   Dir = 'server';       Package = 'server';        DevArgs = @() },
+    @{ Name = 'amity';  Dir = '..\amity';     Package = 'amity-server';  DevArgs = @('--features', 'dev-local') },
+    @{ Name = 'floret'; Dir = '..\floret';    Package = 'floret-server'; DevArgs = @('--features', 'dev-local') }
 )
 
-if ($Deploy -or $Dev) {
-    # a full build always rebuilds every wasm module, not just the ones named
-    $Modules = @('life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm')
+$AllModules = @('life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm')
+# a full build rebuilds every module, unless told which
+if (($Deploy -or $Dev) -and -not $PSBoundParameters.ContainsKey('Modules')) {
+    $Modules = $AllModules
 }
 
 $timings = [ordered]@{}
@@ -49,113 +63,98 @@ function Time-Step {
     $timings[$Name] = $sw.Elapsed
 }
 
-# Builds every linked project's server package (respecting -Servers) and copies
-# the resulting exe into $DestDir. -Release builds all of them with --release;
-# otherwise each uses its own DevArgs (see $LinkedServers above).
-function Build-LinkedServers {
-    param([string] $DestDir, [switch] $Release, [switch] $Time)
+# Builds each server named in -Servers and copies its exe into $DestDir.
+# -Release builds with --release; otherwise with the server's own DevArgs.
+function Build-Servers {
+    param([string] $DestDir, [switch] $Release)
     $profileDir = if ($Release) { 'release' } else { 'debug' }
-    foreach ($linked in $LinkedServers) {
-        if ($Servers -notcontains $linked.Project) { continue }
+    foreach ($server in $ServerList) {
+        if ($Servers -notcontains $server.Name) { continue }
 
-        $projectDir = Join-Path (Split-Path $PSScriptRoot -Parent) $linked.Project
-        if (-not (Test-Path $projectDir)) {
-            Write-Host "  skipping $($linked.Package): $projectDir not found" -ForegroundColor Yellow
+        $dir = Join-Path $PSScriptRoot $server.Dir
+        if (-not (Test-Path $dir)) {
+            Write-Host "  skipping $($server.Package): $dir not found" -ForegroundColor Yellow
             continue
         }
 
-        # wrapped in @(...) so a single-element result stays an array instead of
-        # collapsing to a bare string - splatting a scalar string enumerates it
-        # character by character, which cargo sees as a run of single-dash args
-        $cargoArgs = @(if ($Release) { '--release' } else { $linked.DevArgs })
+        # @(...) keeps a single flag an array: splatting a bare string would pass
+        # it to cargo one character at a time
+        $cargoArgs = @(if ($Release) { '--release' } else { $server.DevArgs })
 
-        Write-Host "`n==> building $($linked.Package) ($profileDir)" -ForegroundColor Cyan
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
-        Push-Location $projectDir
-        cargo build -p $linked.Package @cargoArgs
-        $ok = ($LASTEXITCODE -eq 0)
-        $targetDir = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).target_directory
-        Pop-Location
-        $sw.Stop()
-        if ($Time) { $timings[$linked.Package] = $sw.Elapsed }
-        if (-not $ok) { throw "$($linked.Package) build failed" }
-
-        # these projects pin an explicit build.target in .cargo/config.toml
-        # (to dodge the Windows command-line length limit), so output always
-        # nests under the triple even for a same-arch host build.
-        $exe = Join-Path $targetDir "x86_64-pc-windows-msvc\$profileDir\$($linked.Package).exe"
-        if (Test-Path $exe) {
-            Copy-Item -Force $exe (Join-Path $DestDir "$($linked.Package).exe")
-        } else {
-            Write-Host "  expected $($linked.Package) at $exe, not found - skipping copy" -ForegroundColor Yellow
+        Write-Host "`n==> building $($server.Package) ($profileDir)" -ForegroundColor Cyan
+        Time-Step $server.Package {
+            Push-Location $dir
+            try {
+                cargo build -p $server.Package @cargoArgs
+                if ($LASTEXITCODE -ne 0) { throw "$($server.Package) build failed" }
+                $targetDir = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).target_directory
+            } finally {
+                Pop-Location
+            }
+            # every project pins build.target in .cargo/config.toml (dodging the
+            # Windows command-line length limit), so output nests under the triple
+            $exe = Join-Path $targetDir "x86_64-pc-windows-msvc\$profileDir\$($server.Package).exe"
+            if (-not (Test-Path $exe)) { throw "expected $($server.Package) at $exe" }
+            Copy-Item -Force $exe (Join-Path $DestDir "$($server.Package).exe")
         }
     }
 }
 
 $overall = [System.Diagnostics.Stopwatch]::StartNew()
 
-# only clear what we are about to rebuild, otherwise copy-dir has nothing to
-# copy for the modules we skipped
-foreach ($module in $Modules) {
-    Remove-Item -Recurse -Force ("assets\" + ($module -replace '-wasm$', '')) -ErrorAction SilentlyContinue
-}
-
-# Crates must be built before building the website
+# ---- wasm modules. Only the ones being rebuilt are cleared: the site copies
+# whatever is in assets\, so the others keep their last build
 foreach ($module in $Modules) {
     Time-Step $module {
+        Remove-Item -Recurse -Force ('assets\' + ($module -replace '-wasm$', '')) -ErrorAction SilentlyContinue
         Push-Location "crates\$module"
-        trunk build --release -v
-        Pop-Location
-        if ($LASTEXITCODE -ne 0) { throw "$module build failed" }
+        try {
+            trunk build --release -v
+            if ($LASTEXITCODE -ne 0) { throw "$module build failed" }
+        } finally {
+            Pop-Location
+        }
     }
 }
 
+# ---- the site (-Dev serves it instead, below, so it can watch for changes)
 if (-not $Dev) {
-    # -Dev serves instead of building the site here (see below) so it can watch
-    # for changes; every other mode just needs a one-shot build.
     Time-Step 'site' {
         trunk build --release -v
-        if ($LASTEXITCODE -ne 0) { throw "site build failed" }
+        if ($LASTEXITCODE -ne 0) { throw 'site build failed' }
     }
 }
 
+# ---- deploy\: the site under burvy-dev\dist\, every server exe beside it
 if ($Deploy) {
-    $deployDir = "deploy"
+    $deployDir = Join-Path $PSScriptRoot 'deploy'
     Remove-Item -Recurse -Force $deployDir -ErrorAction SilentlyContinue
-    New-Item -ItemType Directory -Path "$deployDir\dist" -Force | Out-Null
+    $siteDir = Join-Path $deployDir 'burvy-dev\dist'
+    New-Item -ItemType Directory -Path $siteDir -Force | Out-Null
+    Copy-Item -Recurse -Force 'dist\*' $siteDir
 
-    Time-Step 'burvy-dev/server' {
-        Push-Location 'server'
-        cargo build --release
-        Pop-Location
-        if ($LASTEXITCODE -ne 0) { throw "server build failed" }
-    }
-    Copy-Item -Force "server\target\x86_64-pc-windows-msvc\release\server.exe" "$deployDir\server.exe"
-
-    Build-LinkedServers -DestDir $deployDir -Release -Time
+    Build-Servers -DestDir $deployDir -Release
 }
 
 $overall.Stop()
 
 Write-Host "`nBuild times:"
 foreach ($key in $timings.Keys) {
-    Write-Host ("  {0,-20} {1,8:N1}s" -f $key, $timings[$key].TotalSeconds)
+    Write-Host ('  {0,-20} {1,8:N1}s' -f $key, $timings[$key].TotalSeconds)
 }
-Write-Host ("  {0,-20} {1,8:N1}s" -f 'TOTAL', $overall.Elapsed.TotalSeconds)
+Write-Host ('  {0,-20} {1,8:N1}s' -f 'TOTAL', $overall.Elapsed.TotalSeconds)
 
 if (-not $Dev) {
-    Write-Host "`ndist/ is ready:"
-    Get-ChildItem dist\*.wasm, dist\life\*.wasm, dist\amity\*.wasm, dist\floret\*.wasm, dist\venture\*.wasm -ErrorAction SilentlyContinue |
-        ForEach-Object { "  {0,-22} {1,8:N1} MB" -f $_.Name, ($_.Length / 1MB) }
+    Write-Host "`nWasm in dist\:"
+    Get-ChildItem dist -Recurse -Filter *.wasm |
+        ForEach-Object { '  {0,-24} {1,8:N1} MB' -f $_.Name, ($_.Length / 1MB) }
 }
 
 if ($Deploy) {
-    Copy-Item -Recurse -Force "dist\*" "$deployDir\dist\"
-
-    Write-Host "`nDeploy folder ready at $deployDir\ (dist\, server.exe, and every linked project's server.exe)"
-    Write-Host "Note: server.exe expects certs at C:\burvy\certs\webtrans.burvy.dev\ on the target machine - not included here, on purpose."
-    Write-Host "Each project's own go.ps1 -release still works standalone if you only want to redeploy one game."
-
+    Write-Host "`nDeploy folder ready at $deployDir\:" -ForegroundColor Green
+    Get-ChildItem $deployDir |
+        ForEach-Object { '  ' + $_.Name + $(if ($_.PSIsContainer) { '\' } else { '' }) }
+    Write-Host 'Certificates are not included, on purpose: each server loads its own on the server machine.'
     Invoke-Item $deployDir
 }
 
@@ -171,17 +170,8 @@ if ($Dev) {
     $devDir = Join-Path $PSScriptRoot 'dev-servers'
     Remove-Item -Recurse -Force $devDir -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Path $devDir | Out-Null
+    Build-Servers -DestDir $devDir
 
-    Write-Host "`n==> building burvy-dev's own server (dev)" -ForegroundColor Cyan
-    Push-Location 'server'
-    cargo build
-    $ok = ($LASTEXITCODE -eq 0)
-    Pop-Location
-    if (-not $ok) { throw "server build failed" }
-    Copy-Item -Force 'server\target\x86_64-pc-windows-msvc\debug\server.exe' (Join-Path $devDir 'server.exe')
-
-    Build-LinkedServers -DestDir $devDir
-
-    Write-Host "`nSite live at http://localhost:8080 - dev servers gathered at $devDir\" -ForegroundColor Green
+    Write-Host "`nSite live at http://localhost:8080, dev servers gathered in $devDir\" -ForegroundColor Green
     Invoke-Item $devDir
 }
