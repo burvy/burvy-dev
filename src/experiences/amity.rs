@@ -13,10 +13,9 @@ pub fn Amity() -> impl IntoView {
     });
 
     view! {
-        <div id="game-wrapper">
-            <canvas node_ref=canvas id="amity-canvas">
-                "Loading..."
-            </canvas>
+        <div id="game-wrapper" style="position: relative;">
+            <div class="loading-overlay">"Loading..."</div>
+            <canvas node_ref=canvas id="amity-canvas"></canvas>
         </div>
     }
 }

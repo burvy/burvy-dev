@@ -17,10 +17,9 @@ pub fn Floret() -> impl IntoView {
     });
 
     view! {
-        <div id="game-wrapper">
-            <canvas node_ref=canvas id="floret-canvas">
-                "Loading..."
-            </canvas>
+        <div id="game-wrapper" style="position: relative;">
+            <div class="loading-overlay">"Loading..."</div>
+            <canvas node_ref=canvas id="floret-canvas"></canvas>
         </div>
     }
 }

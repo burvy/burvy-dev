@@ -13,10 +13,9 @@ pub fn Game() -> impl IntoView {
     });
 
     view! {
-        <div id="game-wrapper">
-            <canvas node_ref=canvas id="game-canvas">
-                "Loading..."
-            </canvas>
+        <div id="game-wrapper" style="position: relative;">
+            <div class="loading-overlay">"Loading..."</div>
+            <canvas node_ref=canvas id="game-canvas"></canvas>
         </div>
     }
 }
