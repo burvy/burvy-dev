@@ -12,6 +12,11 @@
     color: var(--plg-umber);
 }
 
+/* the div sites.psu.edu mounts into: WordPress adds a gap between blocks */
+#plgroup-root {
+    margin: 0;
+}
+
 .plgroup * {
     font-family: Georgia, "Times New Roman", serif;
 }
