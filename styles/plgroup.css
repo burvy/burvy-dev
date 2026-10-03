@@ -60,6 +60,10 @@
     padding: 1.5rem 2rem;
 }
 
+.plg-main h2 {
+    text-align: center;
+}
+
 @media (max-width: 600px) {
     .plg-header { flex-direction: column; text-align: center; padding: 1.25rem 1rem; }
     .plg-logo { width: 72px; height: 72px; }
