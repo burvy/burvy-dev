@@ -1,0 +1,11 @@
+<!doctype html>
+<!-- Trunk needs an index.html to drive a build, but nothing here is served.
+     The emitted plgroup.js / plgroup_bg.wasm / plgroup.css are loaded by the
+     Custom HTML block on sites.psu.edu/plgroup. -->
+<html>
+    <head>
+        <link data-trunk rel="rust" data-wasm-opt="s" data-wasm-opt-params="-all" />
+        <link data-trunk rel="css" href="plgroup.css" />
+    </head>
+    <body></body>
+</html>

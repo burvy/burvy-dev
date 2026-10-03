@@ -1,0 +1,14 @@
+[package]
+name = "plgroup"
+version = "0.1.0"
+edition = "2024"
+
+# rlib so burvy-dev links it in for burvy.dev/plgroup,
+# cdylib so trunk can build it standalone for embedding on sites.psu.edu
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+leptos = { version = "0.8.19", features = ["csr"] }
+leptos_router = "0.8.13"
+wasm-bindgen = "0.2.125"

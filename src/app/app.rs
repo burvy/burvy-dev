@@ -28,11 +28,7 @@ pub fn App() -> impl IntoView {
                 <Route path=path!("/3d-learn") view=experiences::learn3d::Learn3D />
                 <Route path=path!("/halcyon") view=experiences::halcyon::Halcyon />
                 <Route path=path!("/amity") view=experiences::amity::Amity />
-                <ParentRoute path=path!("/plgroup") view=experiences::plgroup::PLGroup>
-                    <Route path=path!("") view=experiences::plgroup::Home />
-                    <Route path=path!("about") view=experiences::plgroup::About />
-                    <Route path=path!("people") view=experiences::plgroup::People />
-                </ParentRoute>
+                <plgroup::PLGroupRoutes />
             </Routes>
         </Router>
     }

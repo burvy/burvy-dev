@@ -27,7 +27,7 @@
 # Each linked project's own go.ps1 -release still works standalone, for redeploying
 # one game without touching the rest.
 param(
-    [string[]] $Modules = @('life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm'),
+    [string[]] $Modules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm'),
     [string[]] $Servers = @('chat', 'amity', 'floret'),
     [switch] $Deploy,
     [switch] $Dev
@@ -48,7 +48,7 @@ $ServerList = @(
     @{ Name = 'floret'; Dir = '..\floret';    Package = 'floret-server'; DevArgs = @('--features', 'dev-local') }
 )
 
-$AllModules = @('life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm')
+$AllModules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm')
 # a full build rebuilds every module, unless told which
 if (($Deploy -or $Dev) -and -not $PSBoundParameters.ContainsKey('Modules')) {
     $Modules = $AllModules

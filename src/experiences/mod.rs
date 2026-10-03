@@ -114,7 +114,6 @@ pub mod halcyon;
 pub mod learn3d;
 pub mod life;
 pub mod planner;
-pub mod plgroup;
 pub mod soundboard;
 pub mod space;
 pub mod test;

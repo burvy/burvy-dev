@@ -1,0 +1,9 @@
+# builds the embeddable module into the site's assets/, where the main
+# build picks it up with copy-dir
+[build]
+dist = "../../assets/plgroup-embed"
+# sites.psu.edu imports /plgroup-embed/plgroup.js by a fixed path, so no hashing
+filehash = false
+no_sri = true
+# don't let a stub index.html shadow anything
+html_output = "_module.html"
