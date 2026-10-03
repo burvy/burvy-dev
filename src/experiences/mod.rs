@@ -27,8 +27,7 @@ pub const EXPERIENCES: &[Experience] = &[
     },
     Experience {
         name: "StatesMC Website",
-        description:
-            "the website for my minecraft server - the only one with guns for java edition!",
+        description: "the website for my minecraft server - the only one with guns for java edition!",
         path: "https://statesmc.us/",
         background: "images/mwg.png",
     },
@@ -98,6 +97,12 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "an FPS game based around open world exploration in a voxel enviroment",
         path: "/amity",
     },
+    Experience {
+        name: "PSU PL Group",
+        background: "images/plgroup.png",
+        description: "Website for the Penn State Programming Languages Group",
+        path: "/plgroup",
+    },
 ];
 
 /// also add the pages here as you add experiences
@@ -109,6 +114,7 @@ pub mod halcyon;
 pub mod learn3d;
 pub mod life;
 pub mod planner;
+pub mod plgroup;
 pub mod soundboard;
 pub mod space;
 pub mod test;

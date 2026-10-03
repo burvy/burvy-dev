@@ -1,0 +1,60 @@
+.plgroup {
+    --plg-oxford: #002147;
+    --plg-umber: #3B2F2F;
+    --plg-bronze: #8B6B4F;
+    --plg-parchment: #D6C7B2;
+    --plg-wine: #7A1E2D;
+
+    min-height: 100%;
+    background: var(--plg-parchment);
+    color: var(--plg-umber);
+}
+
+.plgroup * {
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.plg-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem 2rem;
+    background: var(--plg-oxford);
+}
+
+.plg-logo {
+    width: 96px;
+    height: 96px;
+}
+
+.plg-title h1 {
+    margin: 0;
+    color: var(--plg-parchment);
+    font-size: 1.8rem;
+    font-weight: normal;
+    letter-spacing: 0.02em;
+}
+
+.plg-nav {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 0 2rem;
+    background: var(--plg-umber);
+}
+
+.plg-nav a {
+    padding: 0.75rem 1rem;
+    color: var(--plg-parchment);
+    text-decoration: none;
+}
+
+.plg-nav a:hover {
+    background: var(--plg-wine);
+}
+
+@media (max-width: 600px) {
+    .plg-header { flex-direction: column; text-align: center; padding: 1.25rem 1rem; }
+    .plg-logo { width: 72px; height: 72px; }
+    .plg-title h1 { font-size: 1.25rem; }
+    .plg-nav { justify-content: center; padding: 0; }
+}
