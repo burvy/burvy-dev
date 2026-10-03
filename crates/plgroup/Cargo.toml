@@ -9,8 +9,6 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-gloo-net = { version = "0.7.0", features = ["json"] }
 leptos = { version = "0.8.19", features = ["csr"] }
 leptos_router = "0.8.13"
-serde = { version = "1.0.228", features = ["derive"] }
 wasm-bindgen = "0.2.125"

@@ -17,12 +17,6 @@
     margin: 0;
 }
 
-/* WordPress also renders the page text itself (for search engines and no-JS
-   visitors); hide that copy once the app is showing it */
-body:has(#plgroup-root .plgroup) .wp-block-post-content:not(:has(#plgroup-root)) {
-    display: none;
-}
-
 .plgroup * {
     font-family: Georgia, "Times New Roman", serif;
 }
