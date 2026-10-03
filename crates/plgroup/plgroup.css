@@ -5,7 +5,9 @@
     --plg-parchment: #D6C7B2;
     --plg-wine: #7A1E2D;
 
-    min-height: 100%;
+    /* fixed size so a host page (WordPress) can't scale the text */
+    font-size: 16px;
+    min-height: 100vh;
     background: var(--plg-parchment);
     color: var(--plg-umber);
 }

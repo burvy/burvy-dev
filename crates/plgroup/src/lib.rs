@@ -4,6 +4,7 @@
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos_router::components::{Outlet, ParentRoute, Route, Router, Routes, A};
+use leptos_router::hooks::{use_location, use_matched};
 use leptos_router::{path, MatchNestedRoutes};
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -69,11 +70,19 @@ fn Header() -> impl IntoView {
 
 #[component]
 fn Nav() -> impl IntoView {
+    // <A exact> treats WordPress's /plgroup/ (trailing slash) as a different page than /plgroup
+    let home = use_matched();
+    let pathname = use_location().pathname;
+    let home_href = move || {
+        let h = home.get();
+        if h.is_empty() { "/".to_string() } else { h }
+    };
+    let at_home = move || pathname.get().trim_end_matches('/') == home.get();
     view! {
         <nav class="plg-nav">
-            <A href="" exact=true>
+            <a href=home_href aria-current=move || at_home().then_some("page")>
                 "Home"
-            </A>
+            </a>
             <A href="about">"About"</A>
             <A href="people">"People"</A>
         </nav>
