@@ -116,7 +116,7 @@ pub fn Home() -> impl IntoView {
     view! {
         <h2>"Home"</h2>
         <p>
-            "Do you like math, programming, or both? " <A href="links">"Join us!"</a>
+            "Do you like math, programming, or both? " <A href="links">"Join us!"</A>
             " Welcome to the Programming Languages Group at Penn State!"
         </p>
     }
