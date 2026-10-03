@@ -49,7 +49,15 @@
 }
 
 .plg-nav a:hover {
+    background: var(--plg-bronze)
+}
+
+.plg-nav a[aria-current="page"] {
     background: var(--plg-wine);
+}
+
+.plg-main {
+    padding: 1.5rem 2rem;
 }
 
 @media (max-width: 600px) {
