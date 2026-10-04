@@ -12,3 +12,5 @@ assets/venture/
 assets/plgroup-embed/
 deploy/
 dev-servers/
+plgroup-server/target/
+plgroup-server/plgroup-dev.db*

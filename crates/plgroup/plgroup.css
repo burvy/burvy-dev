@@ -71,6 +71,41 @@
     text-align: center;
 }
 
+.plg-badge {
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    background: var(--plg-oxford);
+    color: var(--plg-parchment);
+    font-size: 0.8rem;
+}
+
+/* Google's button fills whatever box it's given */
+.plg-google {
+    display: inline-block;
+}
+
+.plg-error {
+    color: var(--plg-wine);
+}
+
+.plg-emails {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.plgroup button {
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--plg-umber);
+    border-radius: 3px;
+    background: var(--plg-umber);
+    color: var(--plg-parchment);
+    cursor: pointer;
+}
+
+.plgroup button:hover {
+    background: var(--plg-bronze);
+}
+
 @media (max-width: 600px) {
     .plg-header { flex-direction: column; text-align: center; padding: 1.25rem 1rem; }
     .plg-logo { width: 72px; height: 72px; }

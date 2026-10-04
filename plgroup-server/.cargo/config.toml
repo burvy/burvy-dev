@@ -1,0 +1,3 @@
+# burvy-dev/.cargo/config.toml pins wasm32 for the site; this is a native binary
+[build]
+target = "x86_64-pc-windows-msvc"

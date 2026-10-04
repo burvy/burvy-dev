@@ -1,0 +1,9 @@
+[package]
+name = "plgroup-api"
+version = "0.1.0"
+edition = "2024"
+
+# request/response shapes shared by the plgroup site and plgroup-server,
+# so the two can't drift apart
+[dependencies]
+serde = { version = "1.0.228", features = ["derive"] }

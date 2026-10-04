@@ -8,6 +8,8 @@ use leptos_router::hooks::{use_location, use_matched};
 use leptos_router::{path, MatchNestedRoutes};
 use wasm_bindgen::prelude::wasm_bindgen;
 
+mod account;
+
 /// images are loaded from burvy.dev even when embedded somewhere else
 const ASSETS: &str = "https://burvy.dev";
 
@@ -22,6 +24,7 @@ pub fn PLGroupRoutes() -> impl MatchNestedRoutes + Clone {
             <Route path=path!("about") view=About />
             <Route path=path!("people") view=People />
             <Route path=path!("links") view=Links />
+            <Route path=path!("settings") view=account::SettingsPage />
         </ParentRoute>
     }
     .into_inner()
@@ -48,6 +51,7 @@ pub fn mount(id: &str) {
 
 #[component]
 pub fn PLGroup() -> impl IntoView {
+    provide_context(account::Auth::new());
     view! {
         <div class="plgroup">
             <Header />
@@ -97,6 +101,7 @@ fn Nav() -> impl IntoView {
             <A href="about">"About"</A>
             <A href="people">"People"</A>
             <A href="links">"Links"</A>
+            <account::AccountLink />
         </nav>
     }
 }

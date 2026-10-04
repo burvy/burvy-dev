@@ -12,10 +12,11 @@
 #                                       deploy\server.exe        the chat server
 #                                       deploy\amity-server.exe
 #                                       deploy\floret-server.exe
+#                                       deploy\plgroup-server.exe
 #                                   Servers are RELEASE builds. Add -Modules to rebuild
 #                                   only some modules (-Modules @() for none: the
 #                                   modules already built go in)
-#   .\build.ps1 -Deploy -Servers amity    only some servers (chat, amity, floret)
+#   .\build.ps1 -Deploy -Servers amity    only some servers (chat, amity, floret, plgroup)
 #
 #   .\build.ps1 -Dev                serves the site on http://localhost:8080 and
 #                                   gathers every server's DEV build (with its dev
@@ -28,7 +29,7 @@
 # one game without touching the rest.
 param(
     [string[]] $Modules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm'),
-    [string[]] $Servers = @('chat', 'amity', 'floret'),
+    [string[]] $Servers = @('chat', 'amity', 'floret', 'plgroup'),
     [switch] $Deploy,
     [switch] $Dev
 )
@@ -45,7 +46,8 @@ if ($env:NO_COLOR) { $env:NO_COLOR = 'true' }
 $ServerList = @(
     @{ Name = 'chat';   Dir = 'server';       Package = 'server';        DevArgs = @() },
     @{ Name = 'amity';  Dir = '..\amity';     Package = 'amity-server';  DevArgs = @('--features', 'dev-local') },
-    @{ Name = 'floret'; Dir = '..\floret';    Package = 'floret-server'; DevArgs = @('--features', 'dev-local') }
+    @{ Name = 'floret'; Dir = '..\floret';    Package = 'floret-server'; DevArgs = @('--features', 'dev-local') },
+    @{ Name = 'plgroup'; Dir = 'plgroup-server'; Package = 'plgroup-server'; DevArgs = @('--features', 'dev-local') }
 )
 
 $AllModules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm')
