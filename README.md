@@ -4,6 +4,8 @@ A site to showcase a bunch of stuff in Rust
 Also I get to test putting random stuff on websites!!!
 
 # Building
+Run the menu:
+`.\menu.ps1`
 To build quickly:  
 `.\build.ps1`  
 To build a release build (site + burvy-dev's own `server.exe`, gathered into `deploy\`):  
@@ -25,6 +27,10 @@ If you are importing Godot games, just do:
 Per-project multiplayer servers (`amity-server`, `floret-server`, ...) still ship for real
 through each project's own `go.ps1 -release`, which calls this script for just its wasm module.
 `-Deploy`/`-Dev` here only cover what burvy-dev itself owns (the site, and its own server).
+
+# Programming Languages Group at Penn State
+[PL Group](https://sites.psu.edu/plgroup)
+
 
 # Game
 `cd crates/game-wasm`  
