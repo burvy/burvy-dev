@@ -223,9 +223,9 @@ pub fn SettingsPage() -> impl IntoView {
                 None => {
                     view! {
                         <h2>"Sign in"</h2>
+                        <p>"Sign in with Google. (PSU emails get a badge) "</p>
                         <p>
-                            "Sign in with Google. (PSU emails get a badge) "
-                            <leptos_router::components::A href="privacy">
+                            <leptos_router::components::A href="../privacy">
                                 "Privacy"
                             </leptos_router::components::A>
                         </p>

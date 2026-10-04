@@ -103,6 +103,7 @@ fn Nav() -> impl IntoView {
             <A href="people">"People"</A>
             <A href="links">"Links"</A>
             <account::AccountLink />
+            <A href="privacy">"Privacy"</A>
         </nav>
     }
 }
@@ -165,7 +166,7 @@ pub fn Privacy() -> impl IntoView {
             "and to send club emails if you joined the " "mailing list. We never share or sell it."
         </p>
         <p>
-            "You can leave the mailing list at any time in " <A href="settings">"Settings"</A>
+            "You can leave the mailing list at any time in " <A href="../settings">"Settings"</A>
             ". To have your data deleted, email me at "
             <a href="mailto:bql5601@psu.edu">"bql5601@psu.edu"</a> "."
         </p>
