@@ -203,7 +203,11 @@ pub fn AccountLink() -> impl IntoView {
 
 #[component]
 fn Badge() -> impl IntoView {
-    view! { <span class="plg-badge" title="Signed in with a Penn State account">"✓ PSU"</span> }
+    view! {
+        <span class="plg-badge" title="Signed in with a Penn State account">
+            "✓ PSU"
+        </span>
+    }
 }
 
 #[component]
@@ -211,16 +215,25 @@ pub fn SettingsPage() -> impl IntoView {
     super::set_title(Some("Settings"));
     let auth = expect_context::<Auth>();
     view! {
-        <Show when=move || !auth.loading.get()>
+        <Show when=move || {
+            !auth.loading.get()
+        }>
             {move || match auth.me.get() {
                 Some(me) => view! { <SignedIn me /> }.into_any(),
-                None => view! {
-                    <h2>"Sign in"</h2>
-                    <p>"Sign in with Google. Penn State accounts get a verified badge."</p>
-                    <GoogleButton />
-                }.into_any(),
-            }}
-            {move || auth.error.get().map(|e| view! { <p class="plg-error">{e}</p> })}
+                None => {
+                    view! {
+                        <h2>"Sign in"</h2>
+                        <p>
+                            "Sign in with Google. (PSU emails get a badge) "
+                            <leptos_router::components::A href="privacy">
+                                "Privacy"
+                            </leptos_router::components::A>
+                        </p>
+                        <GoogleButton />
+                    }
+                        .into_any()
+                }
+            }} {move || auth.error.get().map(|e| view! { <p class="plg-error">{e}</p> })}
         </Show>
     }
 }
@@ -325,24 +338,47 @@ fn AdminPanel() -> impl IntoView {
         <p>
             <button on:click=show_mailing_list>"Show mailing list"</button>
         </p>
-        {move || subscribers.get().map(|list| {
-            let emails = list.iter().map(|s| s.email.as_str()).collect::<Vec<_>>().join(", ");
-            view! {
-                <p>{list.len()} " on the list. Paste into BCC:"</p>
-                <textarea class="plg-emails" readonly rows="4">{emails}</textarea>
-            }
-        })}
+        {move || {
+            subscribers
+                .get()
+                .map(|list| {
+                    let emails = list
+                        .iter()
+                        .map(|s| s.email.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    view! {
+                        <p>{list.len()} " on the list. Paste into BCC:"</p>
+                        <textarea class="plg-emails" readonly rows="4">
+                            {emails}
+                        </textarea>
+                    }
+                })
+        }}
 
         <h3>"Admins"</h3>
         <ul>
-            {move || admins.get().into_iter().enumerate().map(|(i, email)| {
-                // the first is the owner, who can't be removed
-                let button = (i > 0).then(|| {
-                    let email = email.clone();
-                    view! { " " <button on:click=move |_| remove(email.clone())>"remove"</button> }
-                });
-                view! { <li>{email} {button}</li> }
-            }).collect_view()}
+            {move || {
+                admins
+                    .get()
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, email)| {
+                        let button = (i > 0)
+                            .then(|| {
+                                let email = email.clone();
+                                // the first is the owner, who can't be removed
+                                view! {
+                                    " "
+                                    <button on:click=move |_| remove(
+                                        email.clone(),
+                                    )>"remove"</button>
+                                }
+                            });
+                        view! { <li>{email} {button}</li> }
+                    })
+                    .collect_view()
+            }}
         </ul>
         <p>
             <input type="email" placeholder="email address" bind:value=new_admin />

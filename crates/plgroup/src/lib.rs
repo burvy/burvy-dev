@@ -25,6 +25,7 @@ pub fn PLGroupRoutes() -> impl MatchNestedRoutes + Clone {
             <Route path=path!("people") view=People />
             <Route path=path!("links") view=Links />
             <Route path=path!("settings") view=account::SettingsPage />
+            <Route path=path!("privacy") view=Privacy />
         </ParentRoute>
     }
     .into_inner()
@@ -146,6 +147,27 @@ pub fn Links() -> impl IntoView {
         <h2>"Links"</h2>
         <p>
             <a href="https://discord.gg/Xp3tpk9cvP">"Discord Server"</a>
+        </p>
+    }
+}
+
+#[component]
+pub fn Privacy() -> impl IntoView {
+    set_title(Some("Privacy"));
+    view! {
+        <h2>"Privacy"</h2>
+        <p>
+            "When you sign in with Google, we store your name, your email address, "
+            "whether or not it is a Penn State account, and whether or not you joined the mailing list."
+        </p>
+        <p>
+            "We use this only to sign you in, identify content you post here, "
+            "and to send club emails if you joined the " "mailing list. We never share or sell it."
+        </p>
+        <p>
+            "You can leave the mailing list at any time in " <A href="settings">"Settings"</A>
+            ". To have your data deleted, email me at "
+            <a href="mailto:bql5601@psu.edu">"bql5601@psu.edu"</a> "."
         </p>
     }
 }
