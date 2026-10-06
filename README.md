@@ -30,6 +30,86 @@ through each project's own `go.ps1 -release`, which calls this script for just i
 
 # Programming Languages Group at Penn State
 [PL Group](https://sites.psu.edu/plgroup)
+## Accounts (sign-in, settings, mailing list)
+### How sign-in works
+1. Google's button gives the page a signed *credential*.
+2. The page POSTs it to `/auth/google`.
+3. The server checks it with Google's `tokeninfo` endpoint. 
+It must be meant for our `CLIENT_ID` and have a verified 
+email.  
+`hd == "psu.edu"` gets the PSU badge, not necessary but neat.
+4. The server creates or updates the user and returns a random session 
+token. Sessions last 90 days (can be configured)
+5. The page saves the token in localStorage (`plgroup-token`) 
+and sends it as `Authorization: Bearer <token>` on later 
+requests. It uses a token rather than a cookie because cookies 
+from another site get blocked.
+6. A handler that takes `User` requires a valid token, 
+and one that takes `Admin` requires an admin (`OWNER` or anyone 
+in the `admins` table). Admin status is checked on every request.  
+De-admining someone means their next admin-needed request gets rejected 
+instead of next login
+
+### Running locally
+- Server: `cd plgroup-server && cargo run --features dev-local` 
+(http, `plgroup-dev.db`, allows localhost:8702/8080)
+- Page: `cd crates/plgroup && trunk serve --port 8702`. 
+8702 is the origin Google allows. On `localhost` the page 
+calls `http://localhost:3120` automatically.
+
+### Adding things
+#### new endpoint
+1. Put the new request or reply struct in `crates/plgroup-api`.
+2. Write the handler in the server module it belongs to. 
+Take `User` or `Admin` as an argument to control access if desired.
+3. Add a `.route(...)` in `main.rs`.
+4. On the page: 
+`json::<T>(authed(Request::get(&api("/path"))).build().unwrap()).await`.
+
+#### new user setting
+1. Add a field to `Settings` in `plgroup-api`.
+2. In `db.rs`, add the column to `SCHEMA`. 
+**The live DB already exists, so also run `ALTER TABLE users ADD COLUMN ...
+DEFAULT 0` on it.** `CREATE TABLE IF NOT EXISTS` won't add it for existing users!
+3. In `auth.rs`, add it to `user_columns!`, `User`, and `User::me()`.
+4. Write it in `put_settings`'s `UPDATE`.
+5. Add a control in `account/settings.rs`.
+
+#### A new page route
+- Add the route in `lib.rs`, plus a matching WordPress page on sites.psu.edu, 
+or it 404s there.
+- Links between sibling routes: use `<A href="../foo">`, 
+not `"foo"`. Relative links resolve against the current route.
+
+### NOTES
+#### New site origin?
+Update `ORIGINS` in `main.rs` and Google Cloud's Authorized JavaScript Origins (project
+plgroup-510600).
+#### sqlx 0.9 only accepts static SQL strings.
+Build shared fragments with a macro and `concat!` (see 
+`user_columns!`), never `format!`.
+#### `OWNER`** in `admin.rs` is always an admin and can't be removed. 
+Other admins are added from the settings page.
+#### Errors: the server returns `(StatusCode, "short message")`, 
+and the page shows that message as-is. Real errors 
+go through `internal()`, which logs the details and 
+sends only "server error".
+#### Data:`C:\burvy\data\plgroup\plgroup.db` on the server PC. 
+Back up that file.
+#### Cloudflare: the CNAME `plgroup-api` is proxied
+Proxied with the Origin Rule "port 3120" and the Configuration Rule 
+"Full (strict)" for this host only (the zone default stays Flexible). 
+TLS uses a Cloudflare Origin Certificate at `C:\burvy\certs\plgroup-api.burvy.dev\`.
+#### Google app is published. 
+Adding a logo in Branding would force Google verification.
+
+### Known issues
+- `Auth::new` (`account/mod.rs`) clears the token on any `/me` error, 
+so a server restart signs people out. It 
+should only clear on a 401, which needs `send` to return the status.
+- CORS and localStorage are scoped to all of 
+`https://sites.psu.edu`, so other PSU WordPress sites share that origin.
+Fix this before storing anything more sensitive (submissions, posts).
 
 
 # Game
