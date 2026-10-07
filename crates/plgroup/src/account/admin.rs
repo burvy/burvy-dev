@@ -5,8 +5,8 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use plgroup_api::Subscriber;
 
-use super::api::{api, authed, json, send};
 use super::Auth;
+use super::api::{api, authed, json, send};
 
 #[component]
 pub fn AdminPanel() -> impl IntoView {
@@ -28,13 +28,24 @@ pub fn AdminPanel() -> impl IntoView {
     };
     load_admins();
 
-    let show_mailing_list = move |_| {
-        spawn_local(async move {
-            let req = authed(Request::get(&api("/admin/mailing-list"))).build().unwrap();
-            report(json(req).await.map(|list| subscribers.set(Some(list))));
-        })
+    let toggle_mailing_list = move |_| {
+        if subscribers.with_untracked(|s| s.is_some()) {
+            subscribers.set(None);
+        } else {
+            spawn_local(async move {
+                let req = authed(Request::get(&api("/admin/mailing-list")))
+                    .build()
+                    .unwrap();
+                report(json(req).await.map(|list| subscribers.set(Some(list))));
+            })
+        }
     };
-    let admin_url = |email: &str| api(&format!("/admin/admins/{}", js_sys::encode_uri_component(email)));
+    let admin_url = |email: &str| {
+        api(&format!(
+            "/admin/admins/{}",
+            js_sys::encode_uri_component(email)
+        ))
+    };
     let add = move |_| {
         let email = new_admin.get_untracked();
         spawn_local(async move {
@@ -54,7 +65,14 @@ pub fn AdminPanel() -> impl IntoView {
     view! {
         <h3>"Mailing list"</h3>
         <p>
-            <button on:click=show_mailing_list>"Show mailing list"</button>
+            <button on:click=toggle_mailing_list>{
+                move || {if
+                subscribers.get().is_some()
+                {"Hide mailing list"}
+                else {
+                    "Show mailing list"
+                }
+            }}</button>
         </p>
         {move || {
             subscribers
