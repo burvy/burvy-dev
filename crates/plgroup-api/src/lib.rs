@@ -28,6 +28,7 @@ pub struct Me {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 pub struct Settings {
     pub mailing_list: bool,
+    pub show_on_people: bool,
 }
 
 /// GET /admin/mailing-list
@@ -35,4 +36,19 @@ pub struct Settings {
 pub struct Subscriber {
     pub email: String,
     pub name: String,
+}
+
+/// one person on the **People** page
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Person {
+    pub id: i64,
+    pub name: String,
+    pub picture: Option<String>,
+}
+
+/// GET /people
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct People {
+    pub count: i64,
+    pub people: Vec<Person>,
 }

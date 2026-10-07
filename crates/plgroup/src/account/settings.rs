@@ -4,12 +4,12 @@ use gloo_net::http::Request;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use leptos_router::components::A;
-use plgroup_api::{Me, Settings};
+use plgroup_api::Me;
 
+use super::Auth;
 use super::admin::AdminPanel;
 use super::api::{api, authed, send};
 use super::google::GoogleButton;
-use super::Auth;
 
 #[component]
 fn Badge() -> impl IntoView {
@@ -57,9 +57,13 @@ fn SignedIn(me: Me) -> impl IntoView {
                 me.settings.mailing_list = on;
             }
         });
+        let settings = auth
+            .me
+            .with_untracked(|me| me.as_ref().map(|me| me.settings.clone()))
+            .unwrap_or_default();
         spawn_local(async move {
             let req = authed(Request::put(&api("/me/settings")))
-                .json(&Settings { mailing_list: on })
+                .json(&settings)
                 .unwrap();
             if let Err(e) = send(req).await {
                 // put the checkbox back

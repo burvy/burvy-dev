@@ -33,6 +33,7 @@ struct TokenInfo {
     name: Option<String>,
     /// the Google Workspace domain, only present for accounts like @psu.edu
     hd: Option<String>,
+    picture: Option<String>,
 }
 
 /// Google checks the token's signature and expiry; we check it was made for us
@@ -66,16 +67,17 @@ pub async fn sign_in(
 
     // first sign-in creates the user; later ones refresh their name/email
     let user_id: i64 = sqlx::query_scalar(
-        "INSERT INTO users (google_sub, email, name, psu_verified, created_at)
-         VALUES (?, ?, ?, ?, ?)
+        "INSERT INTO users (google_sub, email, name, psu_verified, picture, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT (google_sub) DO UPDATE SET
-             email = excluded.email, name = excluded.name, psu_verified = excluded.psu_verified
+             email = excluded.email, name = excluded.name, psu_verified = excluded.psu_verified, picture = excluded.picture
          RETURNING id",
     )
     .bind(&info.sub)
     .bind(&email)
     .bind(&name)
     .bind(psu_verified)
+    .bind(&info.picture)
     .bind(now())
     .fetch_one(&s.db)
     .await
@@ -117,6 +119,7 @@ pub struct User {
     pub name: String,
     pub psu_verified: bool,
     pub mailing_list: bool,
+    pub show_on_people: bool,
     pub is_admin: bool,
     #[sqlx(default)]
     pub token: String,
@@ -127,7 +130,7 @@ macro_rules! user_columns {
     // is_admin is recalculated every request so losing admin means losing perms
     // the next request
     () => {
-        "users.id, users.email, users.name, users.psu_verified, users.mailing_list,
+        "users.id, users.email, users.name, users.psu_verified, users.mailing_list, users.show_on_people,
         (users.email = ? OR users.email IN (SELECT email FROM admins)) AS is_admin"
     };
 }
@@ -155,6 +158,7 @@ impl User {
             is_admin: self.is_admin,
             settings: Settings {
                 mailing_list: self.mailing_list,
+                show_on_people: self.show_on_people,
             },
         }
     }

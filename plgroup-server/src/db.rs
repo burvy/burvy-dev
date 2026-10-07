@@ -12,6 +12,8 @@ const DB_PATH: &str = "plgroup-dev.db";
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS users (
     id           INTEGER PRIMARY KEY,
+    picture      TEXT,
+    show_on_people INTEGER NOT NULL DEFAULT 0,
     google_sub   TEXT NOT NULL UNIQUE,
     email        TEXT NOT NULL,
     name         TEXT NOT NULL,
@@ -28,7 +30,22 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE TABLE IF NOT EXISTS admins (
     email TEXT PRIMARY KEY
 );
+
+CREATE TABLE IF NOT EXISTS avatars (
+    user_id       INTEGER PRIMARY KEY REFERENCES users(id),
+    png           BLOB NOT NULL,
+    updated_at    INTEGER NOT NULL
+);
 ";
+
+/// contains the changes to the sql table above
+/// NEVER reorder or change these, only add onto it, or
+/// because `open()` skips changes that were already applied
+/// and reordering will cause unintended behavior
+const MIGRATIONS: &[&str] = &[
+    "ALTER TABLE users ADD COLUMN picture TEXT",
+    "ALTER TABLE users ADD COLUMN show_on_people INTEGER NOT NULL DEFAULT 0",
+];
 
 /// opens (or creates) the database and makes sure every table exists
 pub async fn open() -> anyhow::Result<SqlitePool> {
@@ -43,5 +60,16 @@ pub async fn open() -> anyhow::Result<SqlitePool> {
     )
     .await?;
     sqlx::raw_sql(SCHEMA).execute(&db).await?;
+
+    let migrations: i64 = sqlx::query_scalar("PRAGMA user_version")
+        .fetch_one(&db)
+        .await?;
+    for (i, sql) in MIGRATIONS.iter().enumerate().skip(migrations as usize) {
+        sqlx::raw_sql(*sql).execute(&db).await?;
+        let version = format!("PRAGMA user_version = {}", i + 1);
+        sqlx::raw_sql(sqlx::AssertSqlSafe(version))
+            .execute(&db)
+            .await?;
+    }
     Ok(db)
 }

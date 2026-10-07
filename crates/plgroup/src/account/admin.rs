@@ -65,14 +65,15 @@ pub fn AdminPanel() -> impl IntoView {
     view! {
         <h3>"Mailing list"</h3>
         <p>
-            <button on:click=toggle_mailing_list>{
-                move || {if
-                subscribers.get().is_some()
-                {"Hide mailing list"}
-                else {
-                    "Show mailing list"
-                }
-            }}</button>
+            <button on:click=toggle_mailing_list>
+                {move || {
+                    if subscribers.get().is_some() {
+                        "Hide mailing list"
+                    } else {
+                        "Show mailing list"
+                    }
+                }}
+            </button>
         </p>
         {move || {
             subscribers
