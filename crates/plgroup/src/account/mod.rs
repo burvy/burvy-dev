@@ -3,6 +3,7 @@
 mod admin;
 mod api;
 mod google;
+pub mod people;
 mod settings;
 
 use gloo_net::http::Request;
@@ -46,7 +47,9 @@ impl Auth {
 
     /// trades Google's credential for our own token
     async fn sign_in(self, credential: String) {
-        let req = Request::post(&api("/auth/google")).json(&SignIn { credential }).unwrap();
+        let req = Request::post(&api("/auth/google"))
+            .json(&SignIn { credential })
+            .unwrap();
         match json::<Session>(req).await {
             Ok(session) => {
                 set_token(Some(&session.token));
@@ -58,7 +61,12 @@ impl Auth {
     }
 
     async fn sign_out(self) {
-        let _ = send(authed(Request::post(&api("/auth/sign-out"))).build().unwrap()).await;
+        let _ = send(
+            authed(Request::post(&api("/auth/sign-out")))
+                .build()
+                .unwrap(),
+        )
+        .await;
         set_token(None);
         self.me.set(None);
     }
@@ -69,7 +77,12 @@ impl Auth {
 pub fn AccountLink() -> impl IntoView {
     let auth = expect_context::<Auth>();
     let label = move || match auth.me.get() {
-        Some(me) => me.name.split_whitespace().next().unwrap_or("Settings").to_string(),
+        Some(me) => me
+            .name
+            .split_whitespace()
+            .next()
+            .unwrap_or("Settings")
+            .to_string(),
         None => "Sign in".to_string(),
     };
     view! { <A href="settings">{label}</A> }

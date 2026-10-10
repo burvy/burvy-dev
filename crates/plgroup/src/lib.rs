@@ -3,12 +3,13 @@
 
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
-use leptos_router::components::{Outlet, ParentRoute, Route, Router, Routes, A};
+use leptos_router::components::{A, Outlet, ParentRoute, Route, Router, Routes};
 use leptos_router::hooks::{use_location, use_matched};
-use leptos_router::{path, MatchNestedRoutes};
+use leptos_router::{MatchNestedRoutes, path};
 use wasm_bindgen::prelude::wasm_bindgen;
 
 mod account;
+use account::people;
 
 /// images are loaded from burvy.dev even when embedded somewhere else
 const ASSETS: &str = "https://burvy.dev";
@@ -22,7 +23,7 @@ pub fn PLGroupRoutes() -> impl MatchNestedRoutes + Clone {
         <ParentRoute path=path!("/plgroup") view=PLGroup>
             <Route path=path!("") view=Home />
             <Route path=path!("about") view=About />
-            <Route path=path!("people") view=People />
+            <Route path=path!("people") view=people::People />
             <Route path=path!("links") view=Links />
             <Route path=path!("settings") view=account::SettingsPage />
             <Route path=path!("privacy") view=Privacy />
@@ -87,11 +88,7 @@ fn Nav() -> impl IntoView {
     let pathname = use_location().pathname;
     let home_href = move || {
         let h = home.get();
-        if h.is_empty() {
-            "/".to_string()
-        } else {
-            h
-        }
+        if h.is_empty() { "/".to_string() } else { h }
     };
     let at_home = move || pathname.get().trim_end_matches('/') == home.get();
     view! {

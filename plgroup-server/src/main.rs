@@ -1,14 +1,17 @@
 mod admin;
 mod auth;
+mod avatars;
 mod db;
+mod people;
 mod settings;
 
 use std::net::SocketAddr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use axum::http::{header, HeaderValue, Method, StatusCode};
-use axum::routing::{get, post, put};
 use axum::Router;
+use axum::extract::DefaultBodyLimit;
+use axum::http::{HeaderValue, Method, StatusCode, header};
+use axum::routing::{get, post, put};
 use sqlx::sqlite::SqlitePool;
 use tower_http::cors::CorsLayer;
 
@@ -22,6 +25,12 @@ const PORT: u16 = 3120;
 const ORIGINS: &[&str] = &["https://sites.psu.edu", "https://burvy.dev"];
 #[cfg(feature = "dev-local")]
 const ORIGINS: &[&str] = &["http://localhost:8702", "http://localhost:8080"];
+
+/// this server's own address, for links it hands out (like avatar URLs)
+#[cfg(not(feature = "dev-local"))]
+const PUBLIC_URL: &str = "https://plgroup-api.burvy.dev";
+#[cfg(feature = "dev-local")]
+const PUBLIC_URL: &str = "http://localhost:3120";
 
 // a Cloudflare Origin Certificate, so the hop from Cloudflare to here is encrypted too
 #[cfg(not(feature = "dev-local"))]
@@ -47,21 +56,29 @@ fn internal(e: impl std::fmt::Display) -> (StatusCode, &'static str) {
 
 /// seconds since 1970, how times are stored in the database
 fn now() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() as i64
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let state = AppState {
         db: db::open().await?,
-        http: reqwest::Client::new() // to call google
+        http: reqwest::Client::new(), // to call google
     };
 
     // cross-origin resource sharing
     // only allow if these "allow" things are true
     // origins prevents other websites from making requests
     let cors = CorsLayer::new()
-        .allow_origin(ORIGINS.iter().map(|o| HeaderValue::from_static(o)).collect::<Vec<_>>())
+        .allow_origin(
+            ORIGINS
+                .iter()
+                .map(|o| HeaderValue::from_static(o))
+                .collect::<Vec<_>>(),
+        )
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE]);
 
@@ -73,9 +90,21 @@ async fn main() -> anyhow::Result<()> {
         .route("/auth/sign-out", post(auth::sign_out))
         .route("/me", get(settings::me))
         .route("/me/settings", put(settings::put_settings))
+        // uploads are bigger than axum's 2 MB default, so this route gets its own limit
+        .route(
+            "/me/avatar",
+            put(avatars::upload)
+                .delete(avatars::remove)
+                .layer(DefaultBodyLimit::max(avatars::MAX_UPLOAD)),
+        )
+        .route("/avatars/{id}", get(avatars::get))
         .route("/admin/mailing-list", get(admin::mailing_list))
         .route("/admin/admins", get(admin::list_admins))
-        .route("/admin/admins/{email}", put(admin::add_admin).delete(admin::remove_admin))
+        .route(
+            "/admin/admins/{email}",
+            put(admin::add_admin).delete(admin::remove_admin),
+        )
+        .route("/people", get(people::list))
         .layer(cors)
         .with_state(state);
 
@@ -84,13 +113,17 @@ async fn main() -> anyhow::Result<()> {
     #[cfg(feature = "dev-local")]
     {
         println!("plgroup-server (dev) on http://localhost:{PORT}");
-        axum_server::bind(addr).serve(app.into_make_service()).await?;
+        axum_server::bind(addr)
+            .serve(app.into_make_service())
+            .await?;
     }
     #[cfg(not(feature = "dev-local"))]
     {
         let tls = axum_server::tls_rustls::RustlsConfig::from_pem_file(CERT_PATH, KEY_PATH).await?;
         println!("plgroup-server on https://0.0.0.0:{PORT}");
-        axum_server::bind_rustls(addr, tls).serve(app.into_make_service()).await?;
+        axum_server::bind_rustls(addr, tls)
+            .serve(app.into_make_service())
+            .await?;
     }
     Ok(())
 }
