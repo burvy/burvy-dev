@@ -145,6 +145,51 @@ Networking:
 [WebTransport Server](docs/webtransport-server.md)
 [WebTransport Client](docs/webtransport-client.md)
 
+# Primer
+[Primer](../primer) is a picture-book maths app (its own Rust project, next to this one).
+It shows up here as the `/primer` experience.
+
+## How it is wired
+- `primer-web` (`../primer/crates/web`) is a library: `primer_web::mount(element, Config)`
+puts the app inside an element. `Config` is where the server (`api`) and the drawings/sounds
+(`assets`) are.
+- `crates/primer-wasm` is the wrapper (see "Adding Items From Other Crates"). Its `start()`
+mounts Primer with `api: ""` (the site's own address) and `assets: "/primer/assets"`.
+Its `index.html` also copies Primer's css, js and `assets/` next to the wasm, so they end
+up in `/primer/`.
+- `src/experiences/primer.rs` is the page. Primer's css is written for a page of its own
+(it styles `body`), so the page adds it when opened and takes it off when left.
+Primer is built once and kept, so going away and back does not sign you out.
+- Primer has no URL router (one signal picks the page), so it cannot clash with this site's.
+- The card image `assets/images/primer.png` is a **placeholder** (2000x1000), to be drawn.
+
+## Running locally
+Primer's server needs to be running too, on port 3140 (`PRIMER_DEV_SIGNIN=1` is the local
+test sign-in, **never** use it on a real server):
+```
+cd ..\primer
+$env:PRIMER_ADDR = "127.0.0.1:3140"
+$env:DATABASE_URL = "sqlite://primer-dev.db?mode=rwc"
+$env:PRIMER_DEV_SIGNIN = "1"
+cargo run -p primer-server
+```
+Then, in this folder, build and serve the site (`-Dev` also builds Primer's server into
+`dev-servers\primer-server.exe`; that one needs the same variables, plus
+`PRIMER_CONTENT` and `PRIMER_ASSETS` pointing at `..\primer\content` and `..\primer\assets`):
+```
+.\build.ps1 primer-wasm
+trunk serve --release
+```
+Open http://localhost:8080/primer. `Trunk.toml` sends `/api/` to port 3140, so the page and
+the server look like one site. Only primer's wasm: `.\build.ps1 primer-wasm`.
+
+## Known issues
+- Going live needs `/api/` on the site's address to reach Primer's server (a reverse proxy,
+or CORS on Primer's server plus an `api` address in `crates/primer-wasm/src/lib.rs`).
+Primer's sign-in on the real site is Google's (`PRIMER_GOOGLE_CLIENT_ID`), with this
+site's origin allowed in Google Cloud.
+- Primer's css is not scoped to its own element, only to the time the page is open.
+
 # Adding Items From Other Crates
 To add a new big item, follow this checklist, and note, replace `<!name!> 
 with your crate name (<!Name!> is your crate name but capitalized):

@@ -98,6 +98,13 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/amity",
     },
     Experience {
+        name: "Primer",
+        // placeholder image, to be drawn (2000x1000)
+        background: "images/primer.png",
+        description: "a picture-book way to learn maths, read to you by Ada",
+        path: "/primer",
+    },
+    Experience {
         name: "PSU PL Group",
         background: "images/plgroup.png",
         description: "Website for the Penn State Programming Languages Group",
@@ -114,6 +121,7 @@ pub mod halcyon;
 pub mod learn3d;
 pub mod life;
 pub mod planner;
+pub mod primer;
 pub mod soundboard;
 pub mod space;
 pub mod test;

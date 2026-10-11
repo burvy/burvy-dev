@@ -1,0 +1,14 @@
+[package]
+name = "primer-wasm"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# primer is a workspace with no root package, so the path goes to its web crate
+primer-web = { path = "../../../primer/crates/web" }
+wasm-bindgen = "0.2.125"
+web-sys = { version = "0.3.102", features = ["Document", "Element", "HtmlElement", "Node", "Window"] }
+js-sys = "0.3.102"

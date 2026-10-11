@@ -28,8 +28,8 @@
 # Each linked project's own go.ps1 -release still works standalone, for redeploying
 # one game without touching the rest.
 param(
-    [string[]] $Modules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm'),
-    [string[]] $Servers = @('chat', 'amity', 'floret', 'plgroup'),
+    [string[]] $Modules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm', 'primer-wasm'),
+    [string[]] $Servers = @('chat', 'amity', 'floret', 'plgroup', 'primer'),
     [switch] $Deploy,
     [switch] $Dev
 )
@@ -47,10 +47,11 @@ $ServerList = @(
     @{ Name = 'chat';   Dir = 'server';       Package = 'server';        DevArgs = @() },
     @{ Name = 'amity';  Dir = '..\amity';     Package = 'amity-server';  DevArgs = @('--features', 'dev-local') },
     @{ Name = 'floret'; Dir = '..\floret';    Package = 'floret-server'; DevArgs = @('--features', 'dev-local') },
-    @{ Name = 'plgroup'; Dir = 'plgroup-server'; Package = 'plgroup-server'; DevArgs = @('--features', 'dev-local') }
+    @{ Name = 'plgroup'; Dir = 'plgroup-server'; Package = 'plgroup-server'; DevArgs = @('--features', 'dev-local') },
+    @{ Name = 'primer'; Dir = '..\primer'; Package = 'primer-server'; DevArgs = @() }
 )
 
-$AllModules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm')
+$AllModules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm', 'primer-wasm')
 # a full build rebuilds every module, unless told which
 if (($Deploy -or $Dev) -and -not $PSBoundParameters.ContainsKey('Modules')) {
     $Modules = $AllModules
@@ -93,9 +94,11 @@ function Build-Servers {
             } finally {
                 Pop-Location
             }
-            # every project pins build.target in .cargo/config.toml (dodging the
-            # Windows command-line length limit), so output nests under the triple
+            # most projects pin build.target in .cargo/config.toml (dodging the
+            # Windows command-line length limit), so output nests under the triple;
+            # primer does not, so its exe is straight under the profile folder
             $exe = Join-Path $targetDir "x86_64-pc-windows-msvc\$profileDir\$($server.Package).exe"
+            if (-not (Test-Path $exe)) { $exe = Join-Path $targetDir "$profileDir\$($server.Package).exe" }
             if (-not (Test-Path $exe)) { throw "expected $($server.Package) at $exe" }
             Copy-Item -Force $exe (Join-Path $DestDir "$($server.Package).exe")
         }

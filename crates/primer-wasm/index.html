@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+    <head>
+        <link data-trunk rel="rust" data-wasm-opt="s" data-wasm-opt-params="-all" />
+        <!-- Primer's own page files; the experience (src/experiences/primer.rs)
+             loads them while the page is open. The drawings and sounds go to
+             /primer/assets, which is where the module looks for them. -->
+        <link data-trunk rel="copy-file" href="../../../primer/crates/web/style.css" />
+        <link data-trunk rel="copy-file" href="../../../primer/crates/web/play.css" />
+        <link data-trunk rel="copy-file" href="../../../primer/crates/web/audio.js" />
+        <link data-trunk rel="copy-file" href="../../../primer/crates/web/art.js" />
+        <link data-trunk rel="copy-file" href="../../../primer/crates/web/signin.js" />
+        <link data-trunk rel="copy-dir" href="../../../primer/assets" />
+    </head>
+    <body></body>
+</html>

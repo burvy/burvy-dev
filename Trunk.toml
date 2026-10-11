@@ -1,3 +1,8 @@
 # stop watching for database changes
 [watch]
 ignore = ["plgroup-server"]
+
+# for testing Primer locally: its server (port 3140, see the README) answers
+# /api/ on the site's own address, so no cross-origin set-up is needed
+[[proxy]]
+backend = "http://localhost:3140/api/"
