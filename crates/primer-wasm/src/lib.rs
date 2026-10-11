@@ -9,11 +9,13 @@ use wasm_bindgen::prelude::*;
 pub fn start() {
     let document = web_sys::window().unwrap().document().unwrap();
     let host: web_sys::HtmlElement = document.create_element("div").unwrap().unchecked_into();
-    // The server is reached through the site's own address (/api/...): trunk
-    // proxies it when testing locally (see Trunk.toml). The drawings and
-    // sounds are copied next to this module (see index.html).
+    // Picked the way plgroup picks its server: on localhost the server is
+    // reached through the site's own address (/api/...), which trunk proxies
+    // to port 3140 (see Trunk.toml); anywhere else it is the live server.
+    // The drawings and sounds are copied next to this module (see index.html).
+    let local = web_sys::window().unwrap().location().hostname().as_deref() == Ok("localhost");
     let config = primer_web::Config {
-        api: String::new(),
+        api: if local { String::new() } else { "https://primer-api.burvy.dev".into() },
         assets: "/primer/assets".into(),
     };
     primer_web::mount(host.clone(), config);

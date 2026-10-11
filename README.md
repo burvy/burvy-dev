@@ -190,6 +190,40 @@ Primer's sign-in on the real site is Google's (`PRIMER_GOOGLE_CLIENT_ID`), with 
 site's origin allowed in Google Cloud.
 - Primer's css is not scoped to its own element, only to the time the page is open.
 
+## Going live
+The server runs on the server PC like `plgroup-server` (own port, https from a Cloudflare
+origin certificate, CORS for this site). Its settings are environment variables
+(details: Primer's `docs/DEPLOY.md`, part J). Checklist:
+1. Cloudflare: a **proxied CNAME** `primer-api` (to the same target as `plgroup-api`).
+2. Cloudflare **Origin Rule** for `primer-api.burvy.dev`: destination port **3140**.
+3. Cloudflare **Configuration Rule** "Full (strict)" for this host only (zone default stays Flexible).
+4. Origin certificate for `primer-api.burvy.dev` (Cloudflare, Origin Server) saved as
+`C:\burvy\certs\primer-api.burvy.dev\cert.pem` and `key.pem`.
+5. Data: `C:\burvy\data\primer\` (the database, back it up). Jev key (raw key only):
+`C:\burvy\secrets\primer\jev-key.env`.
+6. Google Cloud: in the OAuth client, add `https://burvy.dev` to **Authorized JavaScript
+origins** (the client id is what `PRIMER_GOOGLE_CLIENT_ID` is set to).
+7. Router and Windows firewall: open TCP **3140** to the server PC.
+8. Run `primer-server.exe` (`.\build.ps1 -Deploy` puts it in `deploy\`) from a folder that has
+Primer's `content\` and `assets\`, with these set:
+```
+PRIMER_ADDR=0.0.0.0:3140
+PRIMER_TLS_CERT=C:\burvy\certs\primer-api.burvy.dev\cert.pem
+PRIMER_TLS_KEY=C:\burvy\certs\primer-api.burvy.dev\key.pem
+PRIMER_ALLOWED_ORIGINS=https://burvy.dev
+PRIMER_GOOGLE_CLIENT_ID=<the Google client id>
+DATABASE_URL=sqlite://C:/burvy/data/primer/primer.db?mode=rwc
+PRIMER_JEV_KEY_FILE=C:\burvy\secrets\primer\jev-key.env
+PRIMER_CONTENT=content
+PRIMER_ASSETS=assets
+```
+9. **`PRIMER_DEV_SIGNIN` must NOT be set** on the live server (with a Google client id the
+server refuses to start if it is).
+10. The server reads the certificate once at start, so the scheduled restart (which refreshes
+certs) is enough. New site origin? Update `PRIMER_ALLOWED_ORIGINS` and Google's origins.
+11. The site picks the server by hostname (`crates/primer-wasm/src/lib.rs`): `localhost` uses
+the Trunk proxy, anywhere else `https://primer-api.burvy.dev`.
+
 # Adding Items From Other Crates
 To add a new big item, follow this checklist, and note, replace `<!name!> 
 with your crate name (<!Name!> is your crate name but capitalized):
