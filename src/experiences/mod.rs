@@ -105,6 +105,12 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/primer",
     },
     Experience {
+        name: "Rambl",
+        background: "images/rambl.png",
+        description: "ramble your day at it, and it writes your to-do list and plans your week (made with Jev at c0mpiled-15)",
+        path: "https://ai-todo-api.burvy.dev",
+    },
+    Experience {
         name: "PSU PL Group",
         background: "images/plgroup.png",
         description: "Website for the Penn State Programming Languages Group",
