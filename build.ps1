@@ -13,10 +13,11 @@
 #                                       deploy\amity-server.exe
 #                                       deploy\floret-server.exe
 #                                       deploy\plgroup-server.exe
+#                                       deploy\rambl-server.exe   (Rambl: its web bundle is built first)
 #                                   Servers are RELEASE builds. Add -Modules to rebuild
 #                                   only some modules (-Modules @() for none: the
 #                                   modules already built go in)
-#   .\build.ps1 -Deploy -Servers amity    only some servers (chat, amity, floret, plgroup)
+#   .\build.ps1 -Deploy -Servers amity    only some servers (chat, amity, floret, plgroup, primer, rambl)
 #
 #   .\build.ps1 -Dev                serves the site on http://localhost:8080 and
 #                                   gathers every server's DEV build (with its dev
@@ -29,7 +30,7 @@
 # one game without touching the rest.
 param(
     [string[]] $Modules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm', 'primer-wasm'),
-    [string[]] $Servers = @('chat', 'amity', 'floret', 'plgroup', 'primer'),
+    [string[]] $Servers = @('chat', 'amity', 'floret', 'plgroup', 'primer', 'rambl'),
     [switch] $Deploy,
     [switch] $Dev
 )
@@ -48,7 +49,17 @@ $ServerList = @(
     @{ Name = 'amity';  Dir = '..\amity';     Package = 'amity-server';  DevArgs = @('--features', 'dev-local') },
     @{ Name = 'floret'; Dir = '..\floret';    Package = 'floret-server'; DevArgs = @('--features', 'dev-local') },
     @{ Name = 'plgroup'; Dir = 'plgroup-server'; Package = 'plgroup-server'; DevArgs = @('--features', 'dev-local') },
-    @{ Name = 'primer'; Dir = '..\primer'; Package = 'primer-server'; DevArgs = @() }
+    @{ Name = 'primer'; Dir = '..\primer'; Package = 'primer-server'; DevArgs = @() },
+    # Rambl's web bundle is embedded in its server, so the bundle is built first.
+    @{ Name = 'rambl';  Dir = '..\ai-todo';   Package = 'rambl-server';  DevArgs = @(); Prebuild = {
+        Push-Location '..\ai-todo\web'
+        try {
+            trunk build --release
+            if ($LASTEXITCODE -ne 0) { throw 'rambl web build failed' }
+        } finally {
+            Pop-Location
+        }
+    } }
 )
 
 $AllModules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm', 'primer-wasm')
@@ -86,6 +97,7 @@ function Build-Servers {
 
         Write-Host "`n==> building $($server.Package) ($profileDir)" -ForegroundColor Cyan
         Time-Step $server.Package {
+            if ($server.Prebuild) { & $server.Prebuild }
             Push-Location $dir
             try {
                 cargo build -p $server.Package @cargoArgs
