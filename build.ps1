@@ -74,6 +74,13 @@ if (($Deploy -or $Dev) -and -not $PSBoundParameters.ContainsKey('Modules')) {
     $Modules = $AllModules
 }
 
+# `pwsh -File build.ps1 -Servers rambl,primer` passes 'rambl,primer' as one string,
+# so split it here; a name that matches no server would otherwise build nothing and
+# still report success
+$Servers = @($Servers | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$unknown = @($Servers | Where-Object { $ServerList.Name -notcontains $_ })
+if ($unknown) { throw "unknown server(s): $($unknown -join ', '); expected $($ServerList.Name -join ', ')" }
+
 $timings = [ordered]@{}
 function Time-Step {
     param([string] $Name, [scriptblock] $Body)
