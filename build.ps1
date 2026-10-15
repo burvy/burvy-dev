@@ -18,8 +18,13 @@
 #                                   only some modules (-Modules @() for none: the
 #                                   modules already built go in)
 #   .\build.ps1 -Deploy -Servers amity    only some servers (chat, amity, floret, plgroup, primer, rambl)
+#   .\build.ps1 -Deploy -Servers rambl -RamblDir ..\ai-todo-release
+#                                   Rambl from another checkout, relative to this
+#                                   repo (default ..\ai-todo). Ship from a clean
+#                                   checkout of origin/main: the build takes whatever
+#                                   that folder holds, branch and edits included
 #
-#   .\build.ps1 -Dev                serves the site on http://localhost:8080 and
+#   .\build.ps1 -Dev               serves the site on http://localhost:8080 and
 #                                   gathers every server's DEV build (with its dev
 #                                   flags, see $ServerList) into dev-servers\, to run
 #                                   whichever one you're testing against it
@@ -31,6 +36,7 @@
 param(
     [string[]] $Modules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm', 'primer-wasm'),
     [string[]] $Servers = @('chat', 'amity', 'floret', 'plgroup', 'primer', 'rambl'),
+    [string] $RamblDir = '..\ai-todo',
     [switch] $Deploy,
     [switch] $Dev
 )
@@ -51,8 +57,8 @@ $ServerList = @(
     @{ Name = 'plgroup'; Dir = 'plgroup-server'; Package = 'plgroup-server'; DevArgs = @('--features', 'dev-local') },
     @{ Name = 'primer'; Dir = '..\primer'; Package = 'primer-server'; DevArgs = @() },
     # Rambl's web bundle is embedded in its server, so the bundle is built first.
-    @{ Name = 'rambl';  Dir = '..\ai-todo';   Package = 'rambl-server';  DevArgs = @(); Prebuild = {
-        Push-Location '..\ai-todo\web'
+    @{ Name = 'rambl';  Dir = $RamblDir;      Package = 'rambl-server';  DevArgs = @(); Prebuild = {
+        Push-Location (Join-Path $RamblDir 'web')
         try {
             trunk build --release
             if ($LASTEXITCODE -ne 0) { throw 'rambl web build failed' }
@@ -67,6 +73,13 @@ $AllModules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wa
 if (($Deploy -or $Dev) -and -not $PSBoundParameters.ContainsKey('Modules')) {
     $Modules = $AllModules
 }
+
+# `pwsh -File build.ps1 -Servers rambl,primer` passes 'rambl,primer' as one string,
+# so split it here; a name that matches no server would otherwise build nothing and
+# still report success
+$Servers = @($Servers | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$unknown = @($Servers | Where-Object { $ServerList.Name -notcontains $_ })
+if ($unknown) { throw "unknown server(s): $($unknown -join ', '); expected $($ServerList.Name -join ', ')" }
 
 $timings = [ordered]@{}
 function Time-Step {
