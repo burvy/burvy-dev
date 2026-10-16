@@ -116,6 +116,13 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "Website for the Penn State Programming Languages Group",
         path: "/plgroup",
     },
+    Experience {
+        name: "Buy Me a Coffee",
+        // placeholder image, to be drawn (2000x1000)
+        background: "images/coffee.png",
+        description: "if you like what i make, you can buy me a coffee!",
+        path: "https://buymeacoffee.com/burvy",
+    },
 ];
 
 /// also add the pages here as you add experiences
