@@ -85,12 +85,12 @@ fn video_choices() -> Vec<Video> {
 /// Match an ID to a video URL.
 fn video_url_for(id: i32) -> &'static str {
     match id {
-        1 => "https://www.youtube.com/embed/ivGK0sNju5s?si=C5KL8jHFUjcQd1U-",
-        2 => "https://www.youtube.com/embed/CdYtavp2h24?si=oBFzoC4V169_UVxp",
-        3 => "https://www.youtube.com/embed/Lcupxa72cLk?si=s2IgYDHDwJKvt4rB",
-        4 => "https://www.youtube.com/embed/cqd00g20bkI?si=znIN52dyM1A07JH9",
-        5 => "https://www.youtube.com/embed/HlnNSW_Yi70?si=krmzKolIwR7EZOAq",
-        6 => "https://www.youtube.com/embed/wcRfV6ahkh0?si=LeE3M3i8_Va-XDAl",
+        1 => "https://www.youtube.com/embed/4Er3T1SEDnA?si=eCowRVbXFF3g5urx", // lenka
+        2 => "https://www.youtube.com/embed/ivGK0sNju5s?si=C5KL8jHFUjcQd1U-", // argall
+        3 => "https://www.youtube.com/embed/CdYtavp2h24?si=oBFzoC4V169_UVxp", // animated gun mod
+        4 => "https://www.youtube.com/embed/Lcupxa72cLk?si=s2IgYDHDwJKvt4rB", // sigmagooner
+        5 => "https://www.youtube.com/embed/cqd00g20bkI?si=znIN52dyM1A07JH9", // vietnam
+        6 => "https://www.youtube.com/embed/HlnNSW_Yi70?si=krmzKolIwR7EZOAq", // old trailer
         7 => "https://www.youtube.com/embed/0iSz6aDAZBA?si=uBRqGe-sy0E4_X-o",
         8 => "https://www.youtube.com/embed/CdYtavp2h24?si=oBFzoC4V169_UVxp",
         9 => "https://www.youtube.com/embed/Lcupxa72cLk?si=s2IgYDHDwJKvt4rB",
