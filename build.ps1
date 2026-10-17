@@ -8,7 +8,8 @@
 #
 #   .\build.ps1 -Deploy             everything, gathered into deploy\ to copy to the
 #                                   server machine as is:
-#                                       deploy\burvy-dev\dist\   the site
+#                                       deploy\burvy-dev\dist\   the site (burvy.dev)
+#                                       deploy\statesmc\dist\    the StatesMC site (statesmc.us)
 #                                       deploy\server.exe        the chat server
 #                                       deploy\amity-server.exe
 #                                       deploy\floret-server.exe
@@ -23,6 +24,10 @@
 #                                   repo (default ..\ai-todo). Ship from a clean
 #                                   checkout of origin/main: the build takes whatever
 #                                   that folder holds, branch and edits included
+#   .\build.ps1 -ServersOnly -Servers plgroup
+#                                   just those servers' release exes into deploy\,
+#                                   leaving everything else in deploy\ as it is
+#                                   (menu.ps1 uses this)
 #
 #   .\build.ps1 -Dev               serves the site on http://localhost:8080 and
 #                                   gathers every server's DEV build (with its dev
@@ -38,7 +43,8 @@ param(
     [string[]] $Servers = @('chat', 'amity', 'floret', 'plgroup', 'primer', 'rambl'),
     [string] $RamblDir = '..\ai-todo',
     [switch] $Deploy,
-    [switch] $Dev
+    [switch] $Dev,
+    [switch] $ServersOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -73,6 +79,9 @@ $AllModules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wa
 if (($Deploy -or $Dev) -and -not $PSBoundParameters.ContainsKey('Modules')) {
     $Modules = $AllModules
 }
+if ($ServersOnly) { $Modules = @() }
+
+$deployDir = Join-Path $PSScriptRoot 'deploy'
 
 # `pwsh -File build.ps1 -Servers rambl,primer` passes 'rambl,primer' as one string,
 # so split it here; a name that matches no server would otherwise build nothing and
@@ -148,7 +157,7 @@ foreach ($module in $Modules) {
 }
 
 # ---- the site (-Dev serves it instead, below, so it can watch for changes)
-if (-not $Dev) {
+if (-not $Dev -and -not $ServersOnly) {
     Time-Step 'site' {
         trunk build --release -v
         if ($LASTEXITCODE -ne 0) { throw 'site build failed' }
@@ -157,12 +166,32 @@ if (-not $Dev) {
 
 # ---- deploy\: the site under burvy-dev\dist\, every server exe beside it
 if ($Deploy) {
-    $deployDir = Join-Path $PSScriptRoot 'deploy'
     Remove-Item -Recurse -Force $deployDir -ErrorAction SilentlyContinue
     $siteDir = Join-Path $deployDir 'burvy-dev\dist'
     New-Item -ItemType Directory -Path $siteDir -Force | Out-Null
     Copy-Item -Recurse -Force 'dist\*' $siteDir
 
+    # statesmc.us: a separate site, built straight into its own deploy folder
+    Time-Step 'statesmc' {
+        Push-Location 'crates\statesmc'
+        # its own target folder: trunk shares target\wasm-bindgen\ across the workspace,
+        # and would otherwise pull burvy-dev's js snippets into statesmc's index.html
+        $env:CARGO_TARGET_DIR = Join-Path $PSScriptRoot 'target\statesmc'
+        try {
+            trunk build --release -v --dist (Join-Path $deployDir 'statesmc\dist')
+            if ($LASTEXITCODE -ne 0) { throw 'statesmc build failed' }
+        } finally {
+            Remove-Item Env:CARGO_TARGET_DIR -ErrorAction SilentlyContinue
+            Pop-Location
+        }
+    }
+
+    Build-Servers -DestDir $deployDir -Release
+}
+
+# ---- just some servers, added to whatever deploy\ already holds
+if ($ServersOnly) {
+    New-Item -ItemType Directory -Path $deployDir -Force | Out-Null
     Build-Servers -DestDir $deployDir -Release
 }
 
@@ -174,7 +203,7 @@ foreach ($key in $timings.Keys) {
 }
 Write-Host ('  {0,-20} {1,8:N1}s' -f 'TOTAL', $overall.Elapsed.TotalSeconds)
 
-if (-not $Dev) {
+if (-not $Dev -and -not $ServersOnly) {
     Write-Host "`nWasm in dist\:"
     Get-ChildItem dist -Recurse -Filter *.wasm |
         ForEach-Object { '  {0,-24} {1,8:N1} MB' -f $_.Name, ($_.Length / 1MB) }

@@ -1,0 +1,209 @@
+<!doctype html>
+<html>
+    <link data-trunk rel="copy-dir" href="assets/" />
+    <link data-trunk rel="copy-dir" href="adventure-dist/" />
+    <head>
+        <title>Document</title>
+    </head>
+    <style>
+        :root {
+            --bg: #120f10;
+            --surface: #1b1718;
+            --surface-2: #241f21;
+            --text: #f2efec;
+            --muted: #c9bfb8;
+
+            --red: #d94b4b;
+            --red-deep: #8f2424;
+            --cyan: #39d6e8;
+            --cyan-deep: #0d8b9b;
+
+            --border: rgba(255, 255, 255, 0.08);
+            --shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            border: 0;
+        }
+        body {
+            background-color: var(--bg);
+        }
+        .grass {
+            background-color: lawngreen;
+        }
+        .player {
+            font-family: "Helvetica";
+            font-weight: 900;
+            align-content: center;
+            place-content: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .player-green {
+            background-color: palegreen;
+        }
+        .player-red {
+            background-color: var(--red-deep);
+        }
+        .title {
+            font-family: Helvetica;
+            font-weight: bold;
+        }
+        .limage {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+        }
+        .active {
+            background-color: red;
+        }
+        .inactive {
+            background-color: var(--cyan);
+        }
+        .title1 {
+            font-size: 250%;
+            color: white;
+            text-shadow:
+                -2px -2px 0 var(--surface),
+                2px -2px 0 var(--surface),
+                -2px 2px 0 var(--surface),
+                2px 2px 0 var(--surface);
+            border-radius: 15px;
+        }
+        .title2 {
+            font-size: 200%;
+            color: var(--muted);
+        }
+        .parent {
+            display: grid;
+        }
+        .body-parent {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+        }
+        .simage {
+            background-image: url("assets/statesmc.png");
+            background-size: cover;
+        }
+        .header {
+            grid-template-columns: 1fr 3fr;
+        }
+        .butt {
+            background-color: var(--cyan);
+        }
+        .link-box {
+            background-color: var(--red);
+            background-size: cover;
+            height: 20mm;
+            aspect-ratio: 1 / 1;
+        }
+        .github-link {
+            background-image: url("assets/github.png");
+        }
+        .discord-link {
+            background-image: url("assets/discord.webp");
+        }
+        .space {
+            margin: 4mm 4mm;
+        }
+        .body {
+            grid-template-columns: 1fr 3fr;
+        }
+        .child {
+            display: grid;
+            height: 100px;
+        }
+        .butt-list {
+            font-size: 20px;
+            display: inline-block;
+            background-color: transparent;
+            height: 60px;
+            ratio: 2 / 1;
+            color: var(--text);
+            font-family: Helvetica;
+            text-shadow:
+                -1px -1px 0 var(--surface),
+                1px -1px 0 var(--surface),
+                -1px 1px 0 var(--surface),
+                1px 1px 0 var(--surface);
+        }
+        .header-child {
+            background-color: var(--surface);
+            place-content: center;
+            margin: 0mm 2mm;
+        }
+        .map-child {
+            background-color: var(--surface-2);
+            min-height: 400px;
+        }
+        .map-parent {
+            grid-template-columns: 1fr 1fr;
+        }
+        .body-main {
+            display: grid;
+            background-color: var(--cyan-deep);
+            grid-template-columns: repeat(2, 1fr);
+        }
+        .text {
+            display: grid;
+            color: var(--text);
+            font-family: Helvetica;
+            font-weight: 900;
+        }
+        .body-child {
+            color: var(--text);
+            margin: 2mm 2mm;
+            font-family: Helvetica;
+            font-weight: bold;
+            text-align: center;
+            height: 96%;
+        }
+        .body-side {
+            background-color: var(--surface-2);
+            font-family: Helvetica;
+        }
+        .main-button {
+            margin: 2mm 2mm;
+            padding: 5%;
+            font-family: monospace;
+        }
+        .body-two {
+            display: block;
+            background-color: var(--surface-2);
+            margin: 2mm;
+        }
+        .infant {
+            display: grid;
+            background-color: var(--red);
+            place-content: center;
+        }
+        .scroll-container {
+            height: 100%;
+            overflow-y: scroll;
+        }
+        #main-button-info {
+            font-family: Helvetica;
+            font-size: 100%;
+            padding-left: 4mm;
+            padding-top: 2mm;
+            font-weight: bold;
+            color: var(--text);
+        }
+        .adventure-page {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #000;
+        }
+        .adventure-frame {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+        }
+    </style>
+    <body></body>
+</html>

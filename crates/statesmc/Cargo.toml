@@ -1,0 +1,13 @@
+# the StatesMC website (statesmc.us), moved here from site-website.
+# A separate site from burvy.dev: built on its own into deploy\statesmc\dist
+[package]
+name = "statesmc"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+console_error_panic_hook = "0.1.7"
+gloo-timers = { version = "0.4.0", features = ["futures"] }
+leptos = { version = "0.8.19", features = ["csr"] }
+leptos_router = "0.8.13"
+web-sys = "0.3.99"

@@ -1,6 +1,6 @@
-# stop watching for database changes
+# stop watching for database changes, and for statesmc (a separate site, built on its own)
 [watch]
-ignore = ["plgroup-server"]
+ignore = ["plgroup-server", "crates/statesmc"]
 
 # for testing Primer locally: its server (port 3140, see the README) answers
 # /api/ on the site's own address, so no cross-origin set-up is needed

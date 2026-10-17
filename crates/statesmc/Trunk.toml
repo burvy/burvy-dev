@@ -1,0 +1,5 @@
+# statesmc.us is its own site, served from the root of its own domain.
+# `trunk serve` here (http://localhost:8090) previews it beside burvy-dev's 8080;
+# deploy builds go to deploy\statesmc\dist (menu.ps1 / build.ps1 pass --dist)
+[serve]
+port = 8090

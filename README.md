@@ -5,7 +5,10 @@ Also I get to test putting random stuff on websites!!!
 
 # Building
 Run the menu:
-`.\menu.ps1`
+`.\menu.ps1`  
+It lists everything buildable (wasm modules, burvy.dev, statesmc.us, adventure, servers)
+and you pick what to rebuild this time, e.g. `1 7` or `10-15`. Output goes to `deploy\`,
+and it lists which files differ from the live sites.
 To build quickly:  
 `.\build.ps1`  
 To build a release build (site + burvy-dev's own `server.exe`, gathered into `deploy\`):  
@@ -27,6 +30,18 @@ If you are importing Godot games, just do:
 Per-project multiplayer servers (`amity-server`, `floret-server`, ...) still ship for real
 through each project's own `go.ps1 -release`, which calls this script for just its wasm module.
 `-Deploy`/`-Dev` here only cover what burvy-dev itself owns (the site, and its own server).
+
+# StatesMC website (statesmc.us)
+`crates/statesmc` is the website for the Minecraft server, moved here from `site-website`.
+It is a **separate site on its own domain**, not part of burvy.dev: it builds on its own into
+`deploy\statesmc\dist\` (menu option, or `.\build.ps1 -Deploy`), and that folder is what
+statesmc.us serves.
+- Preview: `cd crates/statesmc` then `trunk serve` (http://localhost:8090).
+- It builds with its own `CARGO_TARGET_DIR` (`target\statesmc`): trunk shares
+`target\wasm-bindgen\` across the workspace and would otherwise add burvy-dev's js snippets
+to statesmc's page.
+- `adventure-dist/` is the adventure game (`..\adventure`), built by the menu's adventure
+option and committed here.
 
 # Programming Languages Group at Penn State
 [PL Group](https://sites.psu.edu/plgroup)
