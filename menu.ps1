@@ -26,6 +26,7 @@ $Targets = @(
     @{ Label = 'plgroup embed (sites.psu.edu, and burvy.dev/plgroup)'; Kind = 'module'; Module = 'plgroup' }
     @{ Label = 'life (cellular automata)';   Kind = 'module'; Module = 'life-wasm' }
     @{ Label = 'amity';                      Kind = 'module'; Module = 'amity-wasm' }
+    @{ Label = 'sandbags';                   Kind = 'module'; Module = 'sandbags-wasm' }
     @{ Label = 'floret';                     Kind = 'module'; Module = 'floret-wasm' }
     @{ Label = 'venture';                    Kind = 'module'; Module = 'venture-wasm' }
     @{ Label = 'primer';                     Kind = 'module'; Module = 'primer-wasm' }
@@ -34,6 +35,7 @@ $Targets = @(
     @{ Label = 'adventure (the game on statesmc.us, from ..\adventure)'; Kind = 'adventure' }
     @{ Label = 'chat server';                Kind = 'server'; Server = 'chat' }
     @{ Label = 'amity-server';               Kind = 'server'; Server = 'amity' }
+    @{ Label = 'sandbags-server';            Kind = 'server'; Server = 'sandbags' }
     @{ Label = 'floret-server';              Kind = 'server'; Server = 'floret' }
     @{ Label = 'plgroup-server';             Kind = 'server'; Server = 'plgroup' }
     @{ Label = 'primer-server';              Kind = 'server'; Server = 'primer' }

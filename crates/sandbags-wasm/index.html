@@ -1,0 +1,11 @@
+<!doctype html>
+<!-- Trunk needs an index.html to drive a build, but nothing here is served.
+     Only the emitted sandbags-wasm.js / sandbags-wasm_bg.wasm pair is copied into
+     the site and imported on demand by the /sandbags route. -->
+<html>
+    <head>
+        <link data-trunk rel="rust" data-wasm-opt="s" data-wasm-opt-params="-all" />
+    </head>
+    <body></body>
+</html>
+
