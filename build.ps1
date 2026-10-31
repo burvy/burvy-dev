@@ -12,13 +12,14 @@
 #                                       deploy\statesmc\dist\    the StatesMC site (statesmc.us)
 #                                       deploy\server.exe        the chat server
 #                                       deploy\amity-server.exe
+#                                       deploy\sandbags-server.exe
 #                                       deploy\floret-server.exe
 #                                       deploy\plgroup-server.exe
 #                                       deploy\rambl-server.exe   (Rambl: its web bundle is built first)
 #                                   Servers are RELEASE builds. Add -Modules to rebuild
 #                                   only some modules (-Modules @() for none: the
 #                                   modules already built go in)
-#   .\build.ps1 -Deploy -Servers amity    only some servers (chat, amity, floret, plgroup, primer, rambl)
+#   .\build.ps1 -Deploy -Servers amity    only some servers (chat, amity, sandbags, floret, plgroup, primer, rambl)
 #   .\build.ps1 -Deploy -Servers rambl -RamblDir ..\ai-todo-release
 #                                   Rambl from another checkout, relative to this
 #                                   repo (default ..\ai-todo). Ship from a clean
@@ -39,8 +40,8 @@
 # Each linked project's own go.ps1 -release still works standalone, for redeploying
 # one game without touching the rest.
 param(
-    [string[]] $Modules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm', 'primer-wasm'),
-    [string[]] $Servers = @('chat', 'amity', 'floret', 'plgroup', 'primer', 'rambl'),
+    [string[]] $Modules = @('plgroup', 'life-wasm', 'amity-wasm', 'sandbags-wasm', 'floret-wasm', 'venture-wasm', 'primer-wasm'),
+    [string[]] $Servers = @('chat', 'amity', 'sandbags', 'floret', 'plgroup', 'primer', 'rambl'),
     [string] $RamblDir = '..\ai-todo',
     [switch] $Deploy,
     [switch] $Dev,
@@ -59,6 +60,7 @@ if ($env:NO_COLOR) { $env:NO_COLOR = 'true' }
 $ServerList = @(
     @{ Name = 'chat';   Dir = 'server';       Package = 'server';        DevArgs = @() },
     @{ Name = 'amity';  Dir = '..\amity';     Package = 'amity-server';  DevArgs = @('--features', 'dev-local') },
+    @{ Name = 'sandbags'; Dir = '..\sandbags'; Package = 'sandbags-server'; DevArgs = @('--features', 'dev-local') },
     @{ Name = 'floret'; Dir = '..\floret';    Package = 'floret-server'; DevArgs = @('--features', 'dev-local') },
     @{ Name = 'plgroup'; Dir = 'plgroup-server'; Package = 'plgroup-server'; DevArgs = @('--features', 'dev-local') },
     @{ Name = 'primer'; Dir = '..\primer'; Package = 'primer-server'; DevArgs = @() },
@@ -74,7 +76,7 @@ $ServerList = @(
     } }
 )
 
-$AllModules = @('plgroup', 'life-wasm', 'amity-wasm', 'floret-wasm', 'venture-wasm', 'primer-wasm')
+$AllModules = @('plgroup', 'life-wasm', 'amity-wasm', 'sandbags-wasm', 'floret-wasm', 'venture-wasm', 'primer-wasm')
 # a full build rebuilds every module, unless told which
 if (($Deploy -or $Dev) -and -not $PSBoundParameters.ContainsKey('Modules')) {
     $Modules = $AllModules

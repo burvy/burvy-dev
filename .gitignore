@@ -15,3 +15,4 @@ deploy/
 dev-servers/
 plgroup-server/target/
 plgroup-server/plgroup-dev.db*
+assets/sandbags/
