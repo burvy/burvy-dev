@@ -127,10 +127,8 @@ pub const EXPERIENCES: &[Experience] = &[
     },
     Experience {
         name: "Sandbags",
-        // TODO(burvy): placeholder image, to be drawn (2000x1000)
-        background: "images/question.png",
-        // TODO(burvy): write the description
-        description: "TODO",
+        background: "images/sandbags.png",
+        description: "A silly chaotic massive battle game!",
         path: "/sandbags",
     },
 ];
