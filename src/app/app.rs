@@ -29,6 +29,7 @@ pub fn App() -> impl IntoView {
                 <Route path=path!("/halcyon") view=experiences::halcyon::Halcyon />
                 <Route path=path!("/amity") view=experiences::amity::Amity />
                 <Route path=path!("/primer") view=experiences::primer::Primer />
+                <Route path=path!("/sandbags") view=experiences::sandbags::Sandbags />
                 <plgroup::PLGroupRoutes />
             </Routes>
         </Router>

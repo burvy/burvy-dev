@@ -12,7 +12,58 @@ pub struct Experience {
 
 /// add new experiences here
 /// theyre just structs
+/// later in the list = higher on the page. the ones whose server is gone
+/// ("(BACKEND OFFLINE)") sit at the bottom, then the ones that need none
 pub const EXPERIENCES: &[Experience] = &[
+    Experience {
+        name: "Game",
+        background: "images/game.png",
+        description: "DISCONTINUED (old web game) (BACKEND OFFLINE)",
+        path: "/game",
+    },
+    Experience {
+        name: "Chatroom",
+        background: "images/chat.png",
+        description: "chatroom chat (BACKEND OFFLINE)",
+        path: "/chat",
+    },
+    Experience {
+        name: "Amity",
+        background: "images/amity.png",
+        description: "an FPS game based around open world exploration in a voxel enviroment (BACKEND OFFLINE)",
+        path: "/amity",
+    },
+    Experience {
+        name: "Floret",
+        background: "images/floret.png",
+        description: "a little hangout space! walk around and talk to whoever is on (BACKEND OFFLINE)",
+        path: "/floret",
+    },
+    Experience {
+        name: "PSU PL Group",
+        background: "images/plgroup.png",
+        description: "Website for the Penn State Programming Languages Group (BACKEND OFFLINE)",
+        path: "/plgroup",
+    },
+    Experience {
+        name: "Primer",
+        // placeholder image, to be drawn (2000x1000)
+        background: "images/primer.png",
+        description: "a picture-book way to learn maths, read to you by Ada (BACKEND OFFLINE)",
+        path: "/primer",
+    },
+    Experience {
+        name: "Rambl",
+        background: "images/rambl.png",
+        description: "ramble your day at it, and it writes your to-do list and plans your week (made with Jev at c0mpiled-15) (BACKEND OFFLINE)",
+        path: "https://rambl.burvy.dev",
+    },
+    Experience {
+        name: "Halcyon",
+        background: "images/halcyon.png",
+        description: "a real multiplayer game iterated quickly in godot (BACKEND OFFLINE)",
+        path: "/halcyon",
+    },
     Experience {
         name: "Test",
         background: "images/glitchcity.jpg",
@@ -26,34 +77,10 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "https://github.com/burvy/burvy-dev",
     },
     Experience {
-        name: "Chatroom",
-        background: "images/chat.png",
-        description: "chatroom chat",
-        path: "/chat",
-    },
-    Experience {
         name: "Space Photos",
         background: "images/stars.png",
         description: "look at cool space photos from NASA!",
         path: "/space-photos",
-    },
-    Experience {
-        name: "Soundboard",
-        background: "images/sound.png",
-        description: "play some of the sounds i have on this website!",
-        path: "/soundboard",
-    },
-    Experience {
-        name: "Cellular Automata",
-        background: "images/life.png",
-        description: "funny game of life",
-        path: "/life",
-    },
-    Experience {
-        name: "Game",
-        background: "images/game.png",
-        description: "DISCONTINUED (old web game)",
-        path: "/game",
     },
     Experience {
         name: "Planner",
@@ -68,23 +95,29 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/3d-learn",
     },
     Experience {
-        name: "Primer",
+        name: "StatesMC Website",
+        description: "the website for my minecraft server - the only one with guns for java edition!",
+        path: "https://statesmc.us/",
+        background: "images/mwg.png",
+    },
+    Experience {
+        name: "Cellular Automata",
+        background: "images/life.png",
+        description: "funny game of life",
+        path: "/life",
+    },
+    Experience {
+        name: "Soundboard",
+        background: "images/sound.png",
+        description: "play some of the sounds i have on this website!",
+        path: "/soundboard",
+    },
+    Experience {
+        name: "Buy Me a Coffee",
         // placeholder image, to be drawn (2000x1000)
-        background: "images/primer.png",
-        description: "a picture-book way to learn maths, read to you by Ada",
-        path: "/primer",
-    },
-    Experience {
-        name: "Rambl",
-        background: "images/rambl.png",
-        description: "ramble your day at it, and it writes your to-do list and plans your week (made with Jev at c0mpiled-15)",
-        path: "https://rambl.burvy.dev",
-    },
-    Experience {
-        name: "Floret",
-        background: "images/floret.png",
-        description: "a little hangout space! walk around and talk to whoever is on",
-        path: "/floret",
+        background: "images/coffee.png",
+        description: "if you like what i make, you can buy me a coffee!",
+        path: "https://buymeacoffee.com/burvy",
     },
     Experience {
         name: "Venture",
@@ -93,35 +126,12 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/venture",
     },
     Experience {
-        name: "Halcyon",
-        background: "images/halcyon.png",
-        description: "a real multiplayer game iterated quickly in godot",
-        path: "/halcyon",
-    },
-    Experience {
-        name: "Amity",
-        background: "images/amity.png",
-        description: "an FPS game based around open world exploration in a voxel enviroment",
-        path: "/amity",
-    },
-    Experience {
-        name: "PSU PL Group",
-        background: "images/plgroup.png",
-        description: "Website for the Penn State Programming Languages Group",
-        path: "/plgroup",
-    },
-    Experience {
-        name: "StatesMC Website",
-        description: "the website for my minecraft server - the only one with guns for java edition!",
-        path: "https://statesmc.us/",
-        background: "images/mwg.png",
-    },
-    Experience {
-        name: "Buy Me a Coffee",
-        // placeholder image, to be drawn (2000x1000)
-        background: "images/coffee.png",
-        description: "if you like what i make, you can buy me a coffee!",
-        path: "https://buymeacoffee.com/burvy",
+        name: "Sandbags",
+        // TODO(burvy): placeholder image, to be drawn (2000x1000)
+        background: "images/question.png",
+        // TODO(burvy): write the description
+        description: "TODO",
+        path: "/sandbags",
     },
 ];
 
@@ -135,6 +145,7 @@ pub mod learn3d;
 pub mod life;
 pub mod planner;
 pub mod primer;
+pub mod sandbags;
 pub mod soundboard;
 pub mod space;
 pub mod test;
