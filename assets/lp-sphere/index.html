@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Lp ball · WebGL2 raymarcher prototype</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0e14; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; cursor: grab; }
+  canvas.dragging { cursor: grabbing; }
+  #ui {
+    position: fixed; top: 14px; left: 14px; width: 288px;
+    background: rgba(13, 17, 26, 0.82); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+    color: #cdd6e4; font: 13px/1.45 ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+    padding: 12px 14px 10px; user-select: none;
+  }
+  #ui h1 { font-size: 13px; font-weight: 600; margin: 0 0 2px; color: #eef2f8; letter-spacing: .2px; }
+  #ui .formula { font: 12px/1.6 ui-monospace, Consolas, monospace; color: #8fb8d8; margin-bottom: 8px; word-break: break-all; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 7px 0; }
+  .row label { flex: 0 0 64px; color: #9fb0c6; }
+  .row .val { flex: 0 0 56px; text-align: right; font: 12px ui-monospace, Consolas, monospace; color: #dfe7f2; }
+  .row input[type=range] { flex: 1; accent-color: #5ec962; height: 18px; min-width: 0; }
+  .row input[type=checkbox] { accent-color: #5ec962; }
+  .row select { background: #161c29; color: #dfe7f2; border: 1px solid rgba(255,255,255,.12); border-radius: 5px; padding: 2px 4px; font: 12px ui-sans-serif; }
+  .row.disabled { opacity: .38; pointer-events: none; }
+  .checks { border-top: 1px solid rgba(255,255,255,.07); margin-top: 8px; padding-top: 4px; }
+  #stats { position: fixed; right: 14px; top: 14px; text-align: right;
+    font: 11px/1.5 ui-monospace, Consolas, monospace; color: #5b6a80; user-select: none; }
+  #hint { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%);
+    font: 11px ui-sans-serif; color: #55637a; user-select: none; }
+  #reset { background:#1a2233; color:#cdd6e4; border:1px solid rgba(255,255,255,.14); border-radius:6px;
+    padding:3px 10px; font:11px ui-sans-serif; cursor:pointer; }
+  #reset:hover { background:#232d42; }
+  #err { position: fixed; inset: 0; display: none; place-items: center; color: #e88; font: 14px ui-monospace; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <h1>Lp ball — raymarched level set</h1>
+  <div class="formula" id="formula"></div>
+  <div class="row"><label>p</label><input type="range" id="pSlider" min="0" max="1000" value="366"><span class="val" id="pVal"></span></div>
+  <div class="row"><label>&nbsp;</label><input type="checkbox" id="pInf"><label for="pInf" style="flex:none; color:#9fb0c6">p = ∞ (max norm)</label></div>
+  <div class="row"><label>radius r</label><input type="range" id="rSlider" min="0.4" max="2.2" step="0.01" value="1.0"><span class="val" id="rVal"></span></div>
+  <div class="checks">
+    <div class="row"><label>slice z</label><input type="range" id="zSlider" min="-2.4" max="2.4" step="0.01" value="0"><span class="val" id="zVal"></span></div>
+    <div class="row"><input type="checkbox" id="planeOn" checked><label for="planeOn" style="flex:none; color:#9fb0c6">slice plane (heatmap)</label></div>
+    <div class="row"><input type="checkbox" id="cutOn" checked><label for="cutOn" style="flex:none; color:#9fb0c6">cut ball at plane</label></div>
+    <div class="row"><label>march steps</label>
+      <select id="quality">
+        <option value="128">128 (low)</option>
+        <option value="256" selected>256 (med)</option>
+        <option value="512">512 (high)</option>
+      </select>
+      <button id="reset">reset view</button>
+    </div>
+  </div>
+</div>
+<div id="stats"></div>
+<div id="hint">drag: orbit · wheel / pinch: zoom</div>
+<div id="err"></div>
+
+<script>
+'use strict';
+/* ============================================================================
+   Prototype: 3D Lp-ball raymarcher (task 008)
+   Single file, WebGL2, no dependencies. Throwaway code that de-risks the
+   real renderer (task 003, Bevy/WGSL): how to raymarch the level set
+   d(x, c) = r of a NON-SDF field without holes or banding. See NOTES.md
+   for the measured tradeoffs.
+   ==========================================================================*/
+
+/* --- fragment shader -------------------------------------------------------
+   MARCHING METHOD (the point of this prototype):
+
+   Sphere tracing steps by f(x) itself, which is only valid when f is a
+   signed distance bound (1-Lipschitz). d_p(x) - r is NOT one:
+     - p > 2: |grad d| < 1 on the faces (under-stepping is safe but slow),
+     - p < 2: |grad d| > 1 near the axes/edges (over-stepping -> holes),
+     - p < 1: |grad d| -> infinity at the coordinate planes (catastrophic),
+     - p = inf: max() is not differentiable on the cube edges.
+   So instead we use FIXED-STEP marching + BISECTION refinement:
+
+     1. Clip the ray to a bounding sphere around the ball, so every ray
+        that can hit the surface marches a segment of at most ~2*boundR.
+     2. Take N uniform samples of the field along that segment. A sign
+        change between consecutive samples brackets a surface crossing.
+     3. Refine each bracket with ~32 bisection iterations (early-out when
+        the bracket is < 1e-6*r, i.e. sub-pixel for f32).
+
+   Why no holes: the Lp ball is star-shaped (d_p is exactly linear along
+   rays from the center), so a camera ray crosses the surface at most a
+   handful of times, and the thinnest features (the axis spikes at p < 1)
+   are ~r thick, far wider than the step size 2*boundR/N. The first sign
+   change is the visible surface.
+
+   Why no banding: the hit point comes from bisection on the sign change,
+   not from "close enough to the surface" threshold acceptance, so the
+   recovered t is accurate to ~1e-6*r regardless of ray angle. Threshold
+   acceptance is what produces terraced surfaces on grazing rays.
+--------------------------------------------------------------------------- */
+const FS = `#version 300 es
+// shader v3: confirmed-penetration marcher
+precision highp float;
+precision highp int;
+
+uniform vec2  uRes;
+uniform vec3  uCamPos, uCamRight, uCamUp, uCamFwd;
+uniform float uP;        // Lp exponent (ignored when uInf > 0.5)
+uniform float uR;        // ball radius
+uniform float uSliceZ;   // slice-plane height
+uniform float uInf;      // 1.0 => use max-norm (exact cube)
+uniform float uPlane;    // draw the extended slice plane
+uniform float uCut;      // clip the ball at z <= uSliceZ (cap = heatmap)
+uniform int   uSteps;    // fixed march steps along the clipped segment
+uniform float uBoundR;   // bounding-sphere radius of the ball
+uniform int   uDebug;    // 0 normal; 1..5 heatColor term ladder (diagnostics)
+
+out vec4 fragColor;
+
+// Lp distance from the origin, d(x,0) = (sum |x_i|^p)^(1/p); max-norm at inf.
+// f32 headroom check: worst case |x|^p at p=20, |x|~4.3 is ~2.7e13, far
+// below f32 overflow; d stays exact enough for sign tests after bisection.
+float lpDist(vec3 x) {
+  if (uInf > 0.5) return max(abs(x.x), max(abs(x.y), abs(x.z)));
+  vec3 a = abs(x);
+  return pow(pow(a.x, uP) + pow(a.y, uP) + pow(a.z, uP), 1.0 / uP);
+}
+
+// Implicit whose zero set is the visible surface: the Lp sphere, optionally
+// intersected with the half-space z <= uSliceZ. CSG intersection with a
+// half-space is max(a, b): continuous, so sign-change marching still works,
+// and the flat cut cap comes for free (its numeric normal is exactly +z).
+float field(vec3 x) {
+  float f = lpDist(x) - uR;
+  if (uCut > 0.5) f = max(f, x.z - uSliceZ);
+  return f;
+}
+
+// Fixed-step march + bisection (see block comment above).
+// Returns t of the first crossing in [t0, t1], or -1. If the segment STARTS
+// inside (camera in the ball), returns t0 so we shade the interior wall.
+//
+// A sample only OPENs a bracket when the field has genuinely penetrated
+// (f <= -1e-4*r), not merely touched 0: rays that skim a crease of
+// g = max(ball, plane) see a wedge minimum hovering at ~0, and f32 rounding
+// makes skim samples flip sign randomly -> "phantom" hits that dither
+// between two surfaces (worse with MORE steps, which catches more skims).
+// Real crossings reach ~ -dt*|grad g| within one step, far past -1e-4*r,
+// and the bracket still contains the exact zero for the bisection below.
+float marchBall(vec3 ro, vec3 rd, float t0, float t1) {
+  float f0 = field(ro + rd * t0);
+  if (f0 <= 0.0) return t0;
+  float dt = (t1 - t0) / float(uSteps);
+  float tPrev = t0, fPrev = f0;
+  float tA = -1.0, tB = -1.0;   // first-seen zero bracket (maybe only skimmed)
+  for (int i = 1; i <= uSteps; i++) {
+    float t = t0 + dt * float(i);
+    float f = field(ro + rd * t);
+    if (f <= 0.0 && fPrev > 0.0 && tA < 0.0) { tA = tPrev; tB = t; }
+    if (f <= -1e-4 * uR) {          // genuine penetration: the crossing was real
+      if (tA < 0.0) { tA = tPrev; tB = t; }  // zero fell between these samples
+      float a = tA, b = tB;         // bisect the confirmed bracket to sub-pixel
+      for (int j = 0; j < 32; j++) {
+        float m = 0.5 * (a + b);
+        if (field(ro + rd * m) <= 0.0) b = m; else a = m;
+        if (b - a < 1e-6 * uR) break;
+      }
+      return 0.5 * (a + b);
+    }
+    tPrev = t; fPrev = f;
+  }
+  return -1.0;  // never penetrated: any weak dips were crease skims, ignore them
+}
+
+// Central-difference gradient of the field. h must NOT be tiny: f32
+// differencing eats ~7 digits, and |grad d_p| blows up near the coordinate
+// planes for p < 1, so h ~ 1e-3 * r is the sweet spot (smooth normals,
+// cube edges at p=inf chamfered over a ~1e-3*r band instead of aliasing).
+vec3 calcNormal(vec3 p) {
+  float h = 1e-3 * uR;
+  return normalize(vec3(
+    field(p + vec3(h, 0, 0)) - field(p - vec3(h, 0, 0)),
+    field(p + vec3(0, h, 0)) - field(p - vec3(0, h, 0)),
+    field(p + vec3(0, 0, h)) - field(p - vec3(0, 0, h))));
+}
+
+// 5-stop viridis approximation, t in [0,1]
+vec3 viridis(float t) {
+  t = clamp(t, 0.0, 1.0);
+  const vec3 c0 = vec3(0.267, 0.005, 0.329);
+  const vec3 c1 = vec3(0.231, 0.322, 0.545);
+  const vec3 c2 = vec3(0.129, 0.567, 0.551);
+  const vec3 c3 = vec3(0.369, 0.789, 0.383);
+  const vec3 c4 = vec3(0.993, 0.906, 0.144);
+  vec3 c = mix(mix(mix(c0, c1, t * 4.0), mix(c1, c2, t * 4.0 - 1.0), step(0.25, t)),
+               mix(mix(c2, c3, t * 4.0 - 2.0), mix(c3, c4, t * 4.0 - 3.0), step(0.75, t)),
+               step(0.5, t));
+  return c;
+}
+
+// Anti-aliased iso-line for a scalar s (one line per unit of s), using
+// screen-space derivatives so the line stays ~1px at any angle.
+float isoLine(float s) {
+  float d = abs(fract(s - 0.5) - 0.5) / max(fwidth(s), 1e-6);
+  return 1.0 - min(d, 1.0);
+}
+
+// Heatmap + contour shading for a point at Lp-distance d from the center.
+// Contours every 0.25*r; the d = r level (the ball's own boundary/cross-
+// section) gets a bright ring, which reads as the "2D Lp ball" on the cut.
+// MUST be called from uniform control flow: fwidth() in divergent flow is
+// undefined, and on ANGLE/D3D it returns quad-swizzled garbage -> the cap
+// dissolved into static checkerboard speckle until this was hoisted out.
+// The cap and the slice plane both face +z, so the light term is constant.
+vec3 heatColor(vec3 pos) {
+  float dv = lpDist(pos) / uR;                    // distance in units of r
+  float lam = dot(vec3(0.0, 0.0, 1.0), normalize(vec3(0.5, 0.35, 0.75)));
+  vec3 col = viridis(dv / 1.6);                   // colormap domain [0, 1.6 r]
+  if (uDebug == 1) return col;
+  // anti-minification: toward the horizon (grazing views) adjacent pixels can
+  // sample >1 colormap unit apart -> rainbow dither. Fade toward the domain
+  // average where the screen-space derivative of the pattern blows up.
+  float zoomOut = smoothstep(0.04, 0.5, fwidth(dv / 1.6));
+  if (uDebug == 5) zoomOut = 0.0;
+  col = mix(col, vec3(0.28, 0.40, 0.52), zoomOut);
+  col *= 0.55 + 0.45 * lam;
+  if (uDebug == 2) return col;
+  // contour lines every 0.25 r, faded by their OWN screen-space rate: once a
+  // period spans less than ~6 px, fract() goes per-pixel random and the line
+  // term turns into stochastic brightness grain (visible on grazing caps)
+  float lineFade = 1.0 - smoothstep(0.08, 0.30, fwidth(dv / 0.25));
+  col *= 1.0 - 0.5 * isoLine(dv / 0.25) * lineFade;
+  if (uDebug == 3) return col;
+  float ring = 1.0 - smoothstep(0.0, max(fwidth(dv), 1e-6) * 1.5, abs(dv - 1.0));
+  col = mix(col, vec3(0.96, 0.98, 0.92), 0.75 * ring);
+  return col;
+}
+
+// world is z-up (the slice plane is z = const); sky brightens toward +z
+vec3 background(vec3 rd) {
+  float up = 0.5 + 0.5 * rd.z;
+  vec3 col = mix(vec3(0.043, 0.055, 0.078), vec3(0.10, 0.13, 0.19), pow(up, 1.5));
+  return col;
+}
+
+void main() {
+  vec2 uv = (2.0 * gl_FragCoord.xy - uRes) / uRes.y;
+  vec3 ro = uCamPos;
+  vec3 rd = normalize(uCamFwd * 1.8 + uv.x * uCamRight + uv.y * uCamUp);
+  vec3 L  = normalize(vec3(0.5, 0.35, 0.75)); // key light from above (+z-up)
+
+  // --- ball: clip ray to bounding sphere, then fixed-step march ---------
+  // boundR = r * 3^max(0, 1/2 - 1/p):  r for p <= 2 (surface fits in the
+  // r-sphere; the p<1 spikes point along the axes and reach exactly r),
+  // growing to r*sqrt(3) at p = inf (cube corners).
+  float tBall = -1.0;
+  vec3 oc = ro;
+  float b = dot(oc, rd), cq = dot(oc, oc) - uBoundR * uBoundR;
+  float disc = b * b - cq;
+  if (disc > 0.0) {
+    float sq = sqrt(disc);
+    float t0 = max(-b - sq, 0.0), t1 = -b + sq;
+    if (t1 > t0) tBall = marchBall(ro, rd, t0, t1);
+  }
+
+  // --- slice plane (z = uSliceZ, clipped to a disc around the ball) -----
+  float tPlane = -1.0;
+  if (uPlane > 0.5 && abs(rd.z) > 1e-5) {
+    float tp = (uSliceZ - ro.z) / rd.z;
+    if (tp > 1e-3) {
+      vec3 hp = ro + rd * tp;
+      if (length(hp.xy) < 2.3 * uR) tPlane = tp;
+    }
+  }
+
+  // Heatmap shading must run in UNIFORM flow (see heatColor comment): pick a
+  // hit point for every pixel unconditionally, take the derivatives there,
+  // and let the branches below only SELECT the result.
+  vec3 heatPoint = ro + rd * max(max(tBall, tPlane), 0.0);
+  if (uDebug == 8) { float d = clamp(lpDist(heatPoint) / uR, 0.0, 1.0);
+                     fragColor = vec4(d, fract(d * 40.0), 0.0, 1.0); return; }
+  if (uDebug == 6) { fragColor = vec4(vec3(0.5 + 0.5 * fract(tBall * 20.0)), 1.0); return; }
+  if (uDebug == 7) { fragColor = vec4(vec3(0.5 + 0.5 * fract(tPlane * 20.0)), 1.0); return; }
+  vec3 heat = heatColor(heatPoint);
+
+  vec3 col;
+  // The cut cap and the slice plane are the SAME surface (z = uSliceZ inside
+  // the cross-section), found by both the march (tBall) and the analytic ray-
+  // plane test (tPlane); f32 noise flips the nearer-hit comparison per pixel.
+  // Both branches must shade it IDENTICALLY (flat heat, no rim/spec), and
+  // near-ties go to the plane branch, or the cap dithers between two
+  // lightings — a z-fight between code paths, worst at grazing angles.
+  if (tBall > 0.0 && (tPlane < 0.0 || tBall < tPlane - 1e-4 * uR)) {
+    // ---- shaded Lp surface ---------------------------------------------
+    vec3 p = ro + rd * tBall;
+    vec3 n = calcNormal(p);
+    if (dot(n, rd) > 0.0) n = -n;      // faceforward: correct when inside
+    float lam = max(dot(n, L), 0.0);
+    float hemi = 0.5 + 0.5 * n.z;      // sky/ground ambient
+    vec3 alb = vec3(0.62, 0.72, 0.82); // porcelain; color lives in the heatmap
+    vec3 h = normalize(L - rd);
+    float spec = pow(max(dot(n, h), 0.0), 48.0) * 0.35;
+    float rim = pow(1.0 + dot(n, rd), 3.0) * 0.18;
+    col = alb * (0.16 + 0.5 * hemi + 0.62 * lam) + spec + rim;
+    // cap (the cut face), classified by the numeric normal: shade it exactly
+    // like the plane branch (see above). n.z > 0.5 is a clean 1px crease line
+    // (comparing the two field terms instead dithers near the crease).
+    if (uCut > 0.5 && n.z > 0.5) col = heat;
+  } else if (tPlane > 0.0) {
+    // ---- slice plane: heatmap of d(c, .) with contours ------------------
+    vec3 p = ro + rd * tPlane;
+    col = heat;
+    // radial fade into the background at the disc edge
+    float fade = smoothstep(2.3 * uR, 1.7 * uR, length(p.xy));
+    col = mix(background(rd), col, fade);
+  } else {
+    col = background(rd);
+  }
+
+  // subtle vignette + gamma
+  vec2 q = gl_FragCoord.xy / uRes;
+  col *= 0.88 + 0.24 * (1.0 - pow(16.0 * q.x * q.y * (1.0 - q.x) * (1.0 - q.y), 0.28));
+  fragColor = vec4(pow(col, vec3(1.0 / 2.2)), 1.0);
+}
+`;
+
+const VS = `#version 300 es
+void main() { // fullscreen triangle from vertex id, no buffers
+  vec2 v = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  gl_Position = vec4(v * 2.0 - 1.0, 0.0, 1.0);
+}
+`;
+
+/* ============================== setup ==================================== */
+const canvas = document.getElementById('c');
+const gl = canvas.getContext('webgl2', { antialias: false });
+if (!gl) {
+  const e = document.getElementById('err');
+  e.style.display = 'grid';
+  e.textContent = 'WebGL2 is not available in this browser.';
+  throw new Error('no webgl2');
+}
+
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+    throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+  throw new Error(gl.getProgramInfoLog(prog));
+gl.useProgram(prog);
+// DITHER is on by default; ANGLE/D3D Bayer-dithers steep gradients into the
+// 8-bit backbuffer, which reads as static quad-checkerboard grain on the
+// heatmap at grazing angles. Off: we band slightly instead, invisibly.
+gl.disable(gl.DITHER);
+const U = {};
+for (const n of ['uRes','uCamPos','uCamRight','uCamUp','uCamFwd','uP','uR',
+                 'uSliceZ','uInf','uPlane','uCut','uSteps','uBoundR','uDebug'])
+  U[n] = gl.getUniformLocation(prog, n);
+
+/* ============================== state ==================================== */
+const state = {
+  p: 3.0, r: 1.0, sliceZ: 0.0, inf: false,
+  plane: true, cut: true, steps: 256, debug: 0,
+};
+window.setDebug = n => { state.debug = n; };
+
+// Bounding sphere: r * 3^max(0, 1/2 - 1/p) (see shader comment), r*sqrt(3) at inf
+function boundR() {
+  if (state.inf) return state.r * Math.sqrt(3) * 1.001;
+  const e = Math.max(0, 0.5 - 1 / state.p);
+  return state.r * Math.pow(3, e) * 1.001;
+}
+
+// Damped orbit camera: targets set by input, `cur` chases them each frame
+const cam = {
+  yaw: 0.65, pitch: 0.32, dist: 3.6,
+  tYaw: 0.65, tPitch: 0.32, tDist: 3.6,
+};
+
+/* ============================== UI ======================================= */
+const $ = id => document.getElementById(id);
+
+// slider is log-scale: position 0..1  ->  p = 0.5 * 40^pos  (0.5 .. 20)
+const pFromSlider = pos => 0.5 * Math.pow(40, pos);
+const sliderFromP = p => Math.log(p / 0.5) / Math.log(40);
+
+function fmtP() {
+  return state.inf ? 'inf' : state.p.toFixed(2);
+}
+function updateFormula() {
+  $('formula').innerHTML = state.inf
+    ? 'd(x,0) = max(|x|,|y|,|z|),&nbsp; ball: d = r'
+    : `d(x,0) = ( |x|<sup>${state.p.toFixed(2)}</sup> + |y|<sup>${state.p.toFixed(2)}</sup> + |z|<sup>${state.p.toFixed(2)}</sup> )<sup>1/${state.p.toFixed(2)}</sup>`;
+}
+function syncUI() {
+  $('pSlider').value = sliderFromP(state.p) * 1000;
+  $('pVal').textContent = fmtP();
+  $('rVal').textContent = state.r.toFixed(2);
+  $('zVal').textContent = state.sliceZ.toFixed(2);
+  $('pSlider').closest('.row').classList.toggle('disabled', state.inf);
+  $('zSlider').disabled = !(state.plane || state.cut);
+  updateFormula();
+}
+
+$('pSlider').addEventListener('input', e => {
+  state.p = pFromSlider(e.target.value / 1000);
+  syncUI();
+});
+$('pInf').addEventListener('change', e => { state.inf = e.target.checked; syncUI(); });
+$('rSlider').addEventListener('input', e => { state.r = +e.target.value; syncUI(); });
+$('zSlider').addEventListener('input', e => { state.sliceZ = +e.target.value; syncUI(); });
+$('planeOn').addEventListener('change', e => { state.plane = e.target.checked; syncUI(); });
+$('cutOn').addEventListener('change', e => { state.cut = e.target.checked; syncUI(); });
+$('quality').addEventListener('change', e => { state.steps = +e.target.value; });
+$('reset').addEventListener('click', () => {
+  cam.tYaw = 0.65; cam.tPitch = 0.32; cam.tDist = 3.6;
+});
+
+/* ============================== input ==================================== */
+const pointers = new Map();
+let lastPinch = 0;
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  canvas.classList.add('dragging');
+});
+canvas.addEventListener('pointermove', e => {
+  if (!pointers.has(e.pointerId)) return;
+  if (pointers.size === 1) {
+    const [px, py] = pointers.get(e.pointerId);
+    cam.tYaw -= (e.clientX - px) * 0.008;
+    cam.tPitch = Math.max(-1.45, Math.min(1.45, cam.tPitch + (e.clientY - py) * 0.008));
+  }
+  pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pointers.size === 2) {
+    const pts = [...pointers.values()];
+    const d = Math.hypot(pts[0][0] - pts[1][0], pts[0][1] - pts[1][1]);
+    if (lastPinch > 0) cam.tDist = Math.max(0.35, Math.min(30, cam.tDist * lastPinch / d));
+    lastPinch = d;
+  } else lastPinch = 0;
+});
+const endPointer = e => {
+  pointers.delete(e.pointerId);
+  lastPinch = 0;
+  if (!pointers.size) canvas.classList.remove('dragging');
+};
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  cam.tDist = Math.max(0.35, Math.min(30, cam.tDist * Math.exp(e.deltaY * 0.0012)));
+}, { passive: false });
+
+/* ============================== render loop ============================== */
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w; canvas.height = h;
+    gl.viewport(0, 0, w, h);
+  }
+}
+
+let lastT = performance.now(), fps = 60;
+function frame(now) {
+  const dt = Math.min((now - lastT) / 1000, 0.1);
+  lastT = now;
+  fps += ((dt > 0 ? 1 / dt : 60) - fps) * 0.08;
+
+  // damp camera toward targets (frame-rate independent)
+  const k = 1 - Math.exp(-dt * 11);
+  cam.yaw += (cam.tYaw - cam.yaw) * k;
+  cam.pitch += (cam.tPitch - cam.pitch) * k;
+  cam.dist += (cam.tDist - cam.dist) * k;
+
+  resize();
+  // z-up orbit: yaw around +z, pitch up from the xy-plane
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const pos = [cam.dist * cp * Math.cos(cam.yaw), cam.dist * cp * Math.sin(cam.yaw), cam.dist * sp];
+  const fwd = [-pos[0] / cam.dist, -pos[1] / cam.dist, -pos[2] / cam.dist]; // |pos| = dist
+  // right = normalize(cross(fwd, worldUp)) with worldUp = (0,0,1)
+  let right = [fwd[1], -fwd[0], 0];
+  const rl = Math.hypot(right[0], right[1]) || 1;
+  right = [right[0] / rl, right[1] / rl, 0];
+  const up = [right[1] * fwd[2] - right[2] * fwd[1],   // cross(right, fwd)
+              right[2] * fwd[0] - right[0] * fwd[2],
+              right[0] * fwd[1] - right[1] * fwd[0]];
+
+  gl.uniform2f(U.uRes, canvas.width, canvas.height);
+  gl.uniform3fv(U.uCamPos, pos);
+  gl.uniform3fv(U.uCamFwd, fwd);
+  gl.uniform3fv(U.uCamRight, right);
+  gl.uniform3fv(U.uCamUp, up);
+  gl.uniform1f(U.uP, state.p);
+  gl.uniform1f(U.uR, state.r);
+  gl.uniform1f(U.uSliceZ, state.sliceZ);
+  gl.uniform1f(U.uInf, state.inf ? 1 : 0);
+  gl.uniform1f(U.uPlane, state.plane ? 1 : 0);
+  gl.uniform1f(U.uCut, state.cut ? 1 : 0);
+  gl.uniform1i(U.uSteps, state.steps);
+  gl.uniform1f(U.uBoundR, boundR());
+  gl.uniform1i(U.uDebug, state.debug);
+
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  requestAnimationFrame(frame);
+}
+
+setInterval(() => {
+  $('stats').textContent =
+    `${fps.toFixed(0)} fps · ${canvas.width}×${canvas.height} · ${state.steps} steps`;
+}, 300);
+
+syncUI();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
