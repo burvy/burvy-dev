@@ -30,6 +30,8 @@ pub fn App() -> impl IntoView {
                 <Route path=path!("/amity") view=experiences::amity::Amity />
                 <Route path=path!("/primer") view=experiences::primer::Primer />
                 <Route path=path!("/sandbags") view=experiences::sandbags::Sandbags />
+                <Route path=path!("/metric-balls") view=experiences::metric_balls::MetricBalls />
+                <Route path=path!("/lp-sphere") view=experiences::lp_sphere::LpSphere />
                 <plgroup::PLGroupRoutes />
             </Routes>
         </Router>

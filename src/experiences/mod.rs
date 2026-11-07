@@ -131,6 +131,18 @@ pub const EXPERIENCES: &[Experience] = &[
         description: "A silly chaotic massive battle game!",
         path: "/sandbags",
     },
+    Experience {
+        name: "Metric Balls",
+        background: "images/metric-balls.png",
+        description: "a demo of balls in nine different metrics",
+        path: "/metric-balls",
+    },
+    Experience {
+        name: "Lp Spheres",
+        background: "images/lp-sphere.png",
+        description: "a demo of Lp spheres in 3D",
+        path: "/lp-sphere",
+    },
 ];
 
 /// also add the pages here as you add experiences
@@ -141,6 +153,8 @@ pub mod game;
 pub mod halcyon;
 pub mod learn3d;
 pub mod life;
+pub mod lp_sphere;
+pub mod metric_balls;
 pub mod planner;
 pub mod primer;
 pub mod sandbags;

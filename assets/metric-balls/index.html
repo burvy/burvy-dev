@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2D metric ball explorer</title>
+<style>
+  :root{
+    --bg:#f7f6f2; --ink:#1c2430; --line:#d8d5cc;
+    --warn-bg:#fdecec; --warn-ink:#9c2f2f; --warn-line:#f0c9c9;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font:14px/1.45 system-ui,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+  main{display:flex;height:100vh}
+  #stage{position:relative;flex:1;min-width:0}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair;touch-action:none}
+  #hint{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.78);border:1px solid var(--line);
+        border-radius:6px;padding:4px 9px;font-size:12px;color:#555;pointer-events:none}
+  aside{width:340px;flex:none;border-left:1px solid var(--line);padding:16px 18px;overflow-y:auto;background:#fffdf8}
+  h1{font-size:17px;margin:0 0 2px}
+  .sub{font-size:12.5px;color:#666;margin-bottom:6px}
+  .sub i,.formula{font-family:Georgia,"Times New Roman",serif}
+  label{display:block;font-size:11.5px;font-weight:600;color:#555;margin:15px 0 4px;
+        text-transform:uppercase;letter-spacing:.05em}
+  select,input[type=range]{width:100%}
+  select{font:inherit;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .row{display:flex;align-items:center;gap:10px}
+  .row output{font-variant-numeric:tabular-nums;min-width:48px;text-align:right;
+              font-family:ui-monospace,Consolas,monospace;font-size:13px}
+  .warn{margin-top:7px;padding:6px 9px;border-radius:6px;background:var(--warn-bg);
+        color:var(--warn-ink);border:1px solid var(--warn-line);font-size:12.5px}
+  .card{margin-top:16px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fff}
+  .formula{font-style:italic;font-size:15px;line-height:1.6}
+  .formula sup{font-size:10px}
+  .explain{margin-top:6px;font-size:13px;color:#4a5568}
+  .readout{margin-top:12px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;
+           color:#333;white-space:pre-line;min-height:3em}
+  footer{margin-top:18px;font-size:11.5px;color:#8a8677}
+</style>
+</head>
+<body>
+<main>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hint">click / drag — move center c &nbsp;·&nbsp; wheel — zoom &nbsp;·&nbsp; shift-drag — pan</div>
+  </div>
+  <aside>
+    <h1>2D metric ball explorer</h1>
+    <div class="sub">The open ball <i>B(c, r) = { x : d(c, x) &lt; r }</i> — same plane,
+      different distance. Formulas as in lesson&nbsp;1.</div>
+
+    <label for="metric">metric</label>
+    <select id="metric"></select>
+
+    <div id="p-block" hidden>
+      <label for="p">exponent p</label>
+      <div class="row">
+        <input type="range" id="p" min="0.3" max="10" step="0.01" value="1.5">
+        <output id="p-out">1.50</output>
+      </div>
+      <div id="p-warn" class="warn" hidden>&#9888; p &lt; 1 — not a metric: the triangle
+        inequality fails, and the ball is not convex.</div>
+    </div>
+
+    <label for="r">radius r</label>
+    <div class="row">
+      <input type="range" id="r" min="0.05" max="8" step="0.01" value="1">
+      <output id="r-out">1.00</output>
+    </div>
+
+    <div class="card">
+      <div class="formula" id="formula"></div>
+      <div class="explain" id="explain"></div>
+    </div>
+
+    <div class="readout" id="readout"></div>
+
+    <footer>Throwaway prototype for lesson 1 · one offline HTML file · every pixel is
+      coloured by evaluating d(c, x) &lt; r; rings are contours of d(c, ·) at 2r, 3r, 4r.</footer>
+  </aside>
+</main>
+
+<script>
+'use strict';
+/* ------------------------------------------------------------------ */
+/*  State                                                              */
+/* ------------------------------------------------------------------ */
+const state = {
+  metric: 'l2',
+  c: [0, 0],              // ball centre, world coordinates
+  r: 1,                   // ball radius
+  p: 1.5,                 // exponent for the Lp family
+  view: { cx: 0, cy: 0, scale: 60 },  // scale = CSS px per world unit
+  tol: 0.01,              // world-space tolerance for the French-railway line test
+};
+
+/* ------------------------------------------------------------------ */
+/*  Metrics.  Formulas follow learn/01-metric-spaces.md, adapted to    */
+/*  the plane.  Each make(c, p) returns d(c, ·) with the centre        */
+/*  baked in, for the per-pixel loop.                                  */
+/* ------------------------------------------------------------------ */
+const METRICS = [
+  {
+    id: 'l1', label: 'Taxicab · L1',
+    formula: 'd(x, y) = |x₁ − y₁| + |x₂ − y₂|',
+    explain: 'Distance walking along city blocks.',
+    make(c) { return (x, y) => Math.abs(x - c[0]) + Math.abs(y - c[1]); },
+  },
+  {
+    id: 'l2', label: 'Euclidean · L2',
+    formula: 'd(x, y) = √((x₁ − y₁)² + (x₂ − y₂)²)',
+    explain: 'The ruler distance.',
+    make(c) { return (x, y) => Math.hypot(x - c[0], y - c[1]); },
+  },
+  {
+    id: 'linf', label: 'Chebyshev · L∞',
+    formula: 'd(x, y) = max(|x₁ − y₁|, |x₂ − y₂|)',
+    explain: 'How many moves a chess king needs.',
+    make(c) {
+      return (x, y) => Math.max(Math.abs(x - c[0]), Math.abs(y - c[1]));
+    },
+  },
+  {
+    id: 'lp', label: 'Lp family · slider for p',
+    formula: 'd(x, y) = (|x₁ − y₁|<sup>p</sup> + |x₂ − y₂|<sup>p</sup>)<sup>1/p</sup>',
+    explain: 'One family containing everything above: p = 1 is taxicab, p = 2 is Euclidean, p → ∞ is Chebyshev.',
+    make(c, p) {
+      const inv = 1 / p;
+      return (x, y) => {
+        const a = Math.abs(x - c[0]), b = Math.abs(y - c[1]);
+        return Math.pow(Math.pow(a, p) + Math.pow(b, p), inv);
+      };
+    },
+  },
+  {
+    id: 'discrete', label: 'Discrete',
+    formula: 'd(x, y) = 0 if x = y, and 1 otherwise',
+    explain: 'Every ball of radius < 1 is a single point (just the marker c); every ball of radius > 1 is the whole plane.',
+    flat: true,   // d only takes the values 0 and 1 — bands and contour rings are meaningless
+    make(c) {
+      return (x, y) => (x === c[0] && y === c[1]) ? 0 : 1;
+    },
+  },
+  {
+    id: 'postoffice', label: 'Post office',
+    formula: 'd(x, y) = |x| + |y| if x ≠ y, and 0 if x = y',
+    explain: 'All mail travels through the central office at the origin (|·| is Euclidean length).',
+    make(c) {
+      const n = Math.hypot(c[0], c[1]);
+      return (x, y) => (x === c[0] && y === c[1]) ? 0 : n + Math.hypot(x, y);
+    },
+  },
+  {
+    id: 'railway', label: 'French railway',
+    formula: 'd(x, y) = |x − y| on the same line through 0,<br>otherwise |x| + |y|',
+    explain: 'Every train goes through Paris (the origin) — unless you are already on the same line through it (dashed).',
+    make(c) {
+      const n = Math.hypot(c[0], c[1]);
+      if (n === 0) return (x, y) => Math.hypot(x, y);   // c = 0: both branches agree, d = |x|
+      // "On the line through 0 and c" is a measure-zero set; we thicken it to ~a pixel
+      // (state.tol) so the segment is visible. Mathematically the test is cross = 0.
+      return (x, y) => {
+        const off = Math.abs(c[0] * y - c[1] * x) / n;  // distance from (x,y) to that line
+        if (off <= state.tol) return Math.hypot(x - c[0], y - c[1]);
+        return n + Math.hypot(x, y);
+      };
+    },
+  },
+  {
+    id: 'hyperbolic', label: 'Hyperbolic · Poincaré pulled back',
+    formula: 'u = f(x), v = f(y), &nbsp;f(z) = tanh(|z|/2)·z/|z|<br>' +
+             'd(x, y) = arcosh(1 + 2|u − v|² ∕ ((1 − |u|²)(1 − |v|²)))',
+    explain: 'Hyperbolic distance on the Poincaré disk, pulled back onto the whole plane by f. Nice detail: d(0, x) = |x| exactly.',
+    heavy: true,   // per-pixel cost is high — cap the render resolution a bit
+    make(c) {
+      const n0 = Math.hypot(c[0], c[1]);
+      let u0 = 0, v0 = 0, A0 = 1;                        // A = 1 − |f(z)|² = sech²(|z|/2)
+      if (n0 > 0) {
+        const t0 = n0 / 2, ch0 = Math.cosh(t0);
+        const s0 = Math.tanh(t0) / n0;
+        u0 = s0 * c[0]; v0 = s0 * c[1]; A0 = 1 / (ch0 * ch0);
+      }
+      return (x, y) => {
+        const n = Math.hypot(x, y);
+        let u, v, A;
+        if (n === 0) { u = 0; v = 0; A = 1; }
+        else {
+          const t = n / 2, ch = Math.cosh(t), s = Math.tanh(t) / n;
+          u = s * x; v = s * y; A = 1 / (ch * ch);
+        }
+        const du = u - u0, dv = v - v0;
+        return Math.acosh(Math.max(1, 1 + 2 * (du * du + dv * dv) / (A0 * A)));
+      };
+    },
+  },
+  {
+    id: 'spherical', label: 'Spherical · inverse stereographic',
+    formula: 'σ(z) = (2z, |z|² − 1) ∕ (|z|² + 1) ∈ S²<br>' +
+             'd(x, y) = arccos(σ(x) · σ(y))',
+    explain: 'The plane wrapped onto a sphere missing one point; d is great-circle distance. Push r past π ≈ 3.14 and the ball is everything.',
+    heavy: true,
+    make(c) {
+      const n2 = c[0] * c[0] + c[1] * c[1], D = n2 + 1;
+      const ax = 2 * c[0] / D, ay = 2 * c[1] / D, az = (n2 - 1) / D;
+      return (x, y) => {
+        if (x === c[0] && y === c[1]) return 0;   // σ(x)·σ(x) = 1 only up to rounding
+        const m2 = x * x + y * y, E = m2 + 1;
+        const bx = 2 * x / E, by = 2 * y / E, bz = (m2 - 1) / E;
+        const dot = ax * bx + ay * by + az * bz;
+        return Math.acos(Math.max(-1, Math.min(1, dot)));
+      };
+    },
+  },
+];
+const BY_ID = {};
+for (const m of METRICS) BY_ID[m.id] = m;
+
+/* ------------------------------------------------------------------ */
+/*  Canvas plumbing                                                    */
+/* ------------------------------------------------------------------ */
+const stage = document.getElementById('stage');
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const fieldCv = document.createElement('canvas');   // offscreen: the pixel-coloured ball
+const fctx = fieldCv.getContext('2d');
+let cw = 0, chh = 0, dpr = 1, devW = 0, devH = 0, img = null;
+
+function resize() {
+  const rect = stage.getBoundingClientRect();
+  cw = Math.max(1, Math.round(rect.width));
+  chh = Math.max(1, Math.round(rect.height));
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  devW = Math.round(cw * dpr); devH = Math.round(chh * dpr);
+  cv.width = devW; cv.height = devH;
+  requestRender(1);
+}
+new ResizeObserver(resize).observe(stage);
+
+/* Coalesce render requests; the largest requested quality wins. */
+let rafPending = false, rafQ = 0;
+function requestRender(q) {
+  if (q > rafQ) rafQ = q;
+  if (!rafPending) {
+    rafPending = true;
+    requestAnimationFrame(() => { rafPending = false; const q2 = rafQ; rafQ = 0; render(q2); });
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Rendering: colour each pixel by testing d(c, x) < r                */
+/* ------------------------------------------------------------------ */
+function render(q) {
+  if (!devW) return;
+  const m = BY_ID[state.metric];
+  if (m.heavy) q = Math.min(q, 0.75);
+  const W = Math.max(1, Math.round(devW * q));
+  const H = Math.max(1, Math.round(devH * q));
+  if (fieldCv.width !== W) fieldCv.width = W;
+  if (fieldCv.height !== H) fieldCv.height = H;
+  if (!img || img.width !== W || img.height !== H) img = fctx.createImageData(W, H);
+  const data = img.data;
+
+  const sdev = dpr * state.view.scale * q;   // device px (at field res) per world unit
+  const h = 1 / sdev;                        // world units per field pixel
+  state.tol = 0.6 / state.view.scale;        // railway line thickness, ~0.6 CSS px
+  const dist = m.make(state.c, state.p);
+  const r = state.r, flat = !!m.flat;
+
+  const bgR = 247, bgG = 246, bgB = 242;     // paper
+  const fR = 52, fG = 80, fB = 196;          // ball fill and band tint
+  const lR = 25, lG = 45, lB = 150;          // contour rings
+  const FILL_A = 0.55;
+
+  const x0 = state.view.cx + (0.5 - W / 2) / sdev;
+  const y0 = state.view.cy - (0.5 - H / 2) / sdev;
+  let k = 0;
+  for (let j = 0; j < H; j++) {
+    const y = y0 - j * h;
+    let x = x0;
+    for (let i = 0; i < W; i++, x += h, k += 4) {
+      const d = dist(x, y);
+      let R = bgR, G = bgG, B = bgB;
+      if (d < r) {
+        // inside the ball; the (r − d)/h term antialiases the boundary over ~1 px
+        let a = (r - d) / h + 0.5;
+        if (a < 0) a = 0; else if (a > 1) a = 1;
+        a *= FILL_A;
+        R += (fR - R) * a; G += (fG - G) * a; B += (fB - B) * a;
+      } else if (!flat) {
+        // faint bands [r,2r), [2r,3r), [3r,4r) — their edges are contours of d
+        const band = (d / r) | 0;
+        if (band >= 1 && band <= 3) {
+          const ba = (band & 1) ? 0.10 : 0.045;
+          R += (fR - R) * ba; G += (fG - G) * ba; B += (fB - B) * ba;
+        }
+        // crisp contour rings of d(c, ·) at 2r, 3r, 4r; they crowd where d grows fast
+        const kn = Math.round(d / r);
+        if (kn >= 2 && kn <= 4) {
+          const dd = Math.abs(d - kn * r);
+          if (dd < h) {
+            const la = (1 - dd / h) * 0.5;
+            R += (lR - R) * la; G += (lG - G) * la; B += (lB - B) * la;
+          }
+        }
+      }
+      data[k] = R; data[k + 1] = G; data[k + 2] = B; data[k + 3] = 255;
+    }
+  }
+  fctx.putImageData(img, 0, 0);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.imageSmoothingEnabled = q < 1;
+  ctx.drawImage(fieldCv, 0, 0, devW, devH);
+  drawOverlay();
+}
+
+/* Grid, axes, labels, extras — vector drawing on top of the field. */
+function niceStep(scale) {
+  const steps = [0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100];
+  for (const s of steps) if (s * scale >= 48) return s;
+  return 200;
+}
+function drawOverlay() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);   // work in CSS px
+  const { cx, cy, scale } = state.view;
+  const toPxX = x => (x - cx) * scale + cw / 2;
+  const toPxY = y => chh / 2 - (y - cy) * scale;
+  const toWorldX = px => cx + (px - cw / 2) / scale;
+  const toWorldY = py => cy + (chh / 2 - py) / scale;
+
+  // grid
+  const step = niceStep(scale);
+  const dec = (String(step).split('.')[1] || '').length;
+  const xmin = Math.floor(toWorldX(0) / step) * step, xmax = toWorldX(cw);
+  const ymax = Math.ceil(toWorldY(0) / step) * step, ymin = toWorldY(chh);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(60,60,70,0.10)';
+  ctx.beginPath();
+  for (let x = xmin; x <= xmax + step; x += step) {
+    const X = Math.round(toPxX(x)) + 0.5;
+    ctx.moveTo(X, 0); ctx.lineTo(X, chh);
+  }
+  for (let y = ymin; y <= ymax + step; y += step) {
+    const Y = Math.round(toPxY(y)) + 0.5;
+    ctx.moveTo(0, Y); ctx.lineTo(cw, Y);
+  }
+  ctx.stroke();
+
+  // axes through the origin
+  const X0 = Math.round(toPxX(0)) + 0.5, Y0 = Math.round(toPxY(0)) + 0.5;
+  ctx.strokeStyle = 'rgba(60,60,70,0.38)';
+  ctx.beginPath();
+  ctx.moveTo(X0, 0); ctx.lineTo(X0, chh);
+  ctx.moveTo(0, Y0); ctx.lineTo(cw, Y0);
+  ctx.stroke();
+
+  // axis labels
+  ctx.fillStyle = 'rgba(40,40,50,0.5)';
+  ctx.font = '10px system-ui,sans-serif';
+  const skip = step * scale >= 64 ? 1 : 2;
+  if (Y0 > 0 && Y0 < chh) {
+    ctx.textAlign = 'center';
+    for (let i = Math.round(xmin / step); i <= Math.round(xmax / step); i++) {
+      if (i === 0 || i % skip !== 0) continue;
+      const x = i * step;
+      ctx.fillText(x.toFixed(dec), toPxX(x), Y0 + 14);
+    }
+  }
+  if (X0 > 0 && X0 < cw) {
+    ctx.textAlign = 'right';
+    for (let i = Math.round(ymin / step); i <= Math.round(ymax / step); i++) {
+      if (i === 0 || i % skip !== 0) continue;
+      const y = i * step;
+      ctx.fillText(y.toFixed(dec), X0 - 5, toPxY(y) + 3.5);
+    }
+  }
+
+  // French railway: the line through 0 and c ("the line you are already on")
+  if (state.metric === 'railway') {
+    const n = Math.hypot(state.c[0], state.c[1]);
+    if (n > 1e-12) {
+      const L = 2 * Math.max(Math.abs(toWorldX(0)), Math.abs(toWorldX(cw)),
+                             Math.abs(toWorldY(0)), Math.abs(toWorldY(chh))) + 10;
+      const ux = state.c[0] / n, uy = state.c[1] / n;
+      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = 'rgba(140,70,180,0.55)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(toPxX(ux * L), toPxY(uy * L));
+      ctx.lineTo(toPxX(-ux * L), toPxY(-uy * L));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // the ball's segment part { c + t·û : |t| < r } is a measure-zero sliver
+      // the pixel loop can only hint at — draw it as a crisp line
+      ctx.strokeStyle = 'rgba(52, 80, 196, 0.9)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(toPxX(state.c[0] - ux * state.r), toPxY(state.c[1] - uy * state.r));
+      ctx.lineTo(toPxX(state.c[0] + ux * state.r), toPxY(state.c[1] + uy * state.r));
+      ctx.stroke();
+    }
+  }
+
+  // centre marker
+  const Cx = toPxX(state.c[0]), Cy = toPxY(state.c[1]);
+  ctx.beginPath();
+  ctx.arc(Cx, Cy, 4.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#101828'; ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+  ctx.font = 'italic bold 13px Georgia,serif';
+  ctx.textAlign = 'left';
+  ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.strokeText('c', Cx + 8, Cy - 8);
+  ctx.fillStyle = '#101828';
+  ctx.fillText('c', Cx + 8, Cy - 8);
+}
+
+/* ------------------------------------------------------------------ */
+/*  UI                                                                 */
+/* ------------------------------------------------------------------ */
+const sel = document.getElementById('metric');
+for (const m of METRICS) {
+  const o = document.createElement('option');
+  o.value = m.id; o.textContent = m.label;
+  sel.appendChild(o);
+}
+sel.value = state.metric;
+
+const rIn = document.getElementById('r'), rOut = document.getElementById('r-out');
+const pIn = document.getElementById('p'), pOut = document.getElementById('p-out');
+const pBlock = document.getElementById('p-block'), pWarn = document.getElementById('p-warn');
+const formulaEl = document.getElementById('formula'), explainEl = document.getElementById('explain');
+const readoutEl = document.getElementById('readout');
+
+function syncMetricPanel() {
+  const m = BY_ID[state.metric];
+  formulaEl.innerHTML = m.formula;
+  explainEl.textContent = m.explain;
+  pBlock.hidden = state.metric !== 'lp';
+  pWarn.hidden = !(state.metric === 'lp' && state.p < 1);
+  rIn.max = state.metric === 'spherical' ? 4 : 8;   // past π the spherical ball is everything
+  if (parseFloat(rIn.value) > parseFloat(rIn.max)) {
+    state.r = parseFloat(rIn.max); rIn.value = rIn.max; rOut.textContent = state.r.toFixed(2);
+  }
+}
+
+function fmtC(v) { return (v < 0 ? '' : '\u2007') + v.toFixed(3); }
+let cursorWorld = null;
+function updateReadout() {
+  let s = 'c = (' + fmtC(state.c[0]) + ', ' + fmtC(state.c[1]) + ')   r = ' + state.r.toFixed(2);
+  if (cursorWorld) {
+    const d = BY_ID[state.metric].make(state.c, state.p)(cursorWorld[0], cursorWorld[1]);
+    s += '\nd(c, cursor) = ' + d.toFixed(4);
+  }
+  readoutEl.textContent = s;
+}
+
+sel.addEventListener('change', () => {
+  state.metric = sel.value;
+  syncMetricPanel();
+  updateReadout();
+  requestRender(1);
+});
+rIn.addEventListener('input', () => {
+  state.r = parseFloat(rIn.value);
+  rOut.textContent = state.r.toFixed(2);
+  updateReadout();
+  requestRender(0.5);
+});
+rIn.addEventListener('change', () => requestRender(1));
+pIn.addEventListener('input', () => {
+  state.p = parseFloat(pIn.value);
+  pOut.textContent = state.p.toFixed(2);
+  pWarn.hidden = !(state.p < 1);
+  updateReadout();
+  requestRender(0.5);
+});
+pIn.addEventListener('change', () => requestRender(1));
+
+/* Pointer: primary drag moves c, shift-drag (or any other button) pans. */
+let dragMode = null;
+function screenToWorld(e) {
+  const rect = cv.getBoundingClientRect();
+  const px = e.clientX - rect.left, py = e.clientY - rect.top;
+  return [state.view.cx + (px - cw / 2) / state.view.scale,
+          state.view.cy + (chh / 2 - py) / state.view.scale];
+}
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  if (e.button === 0 && !e.shiftKey) {
+    dragMode = 'c';
+    state.c = screenToWorld(e);
+    updateReadout();
+    requestRender(0.5);
+  } else {
+    dragMode = 'pan';
+    e.preventDefault();
+  }
+});
+cv.addEventListener('pointermove', e => {
+  cursorWorld = screenToWorld(e);
+  if (dragMode === 'c') {
+    state.c = cursorWorld;
+    updateReadout();
+    requestRender(0.5);
+  } else if (dragMode === 'pan') {
+    state.view.cx -= e.movementX / state.view.scale;
+    state.view.cy += e.movementY / state.view.scale;
+    requestRender(0.5);
+  } else {
+    updateReadout();
+  }
+});
+function endDrag() {
+  if (!dragMode) return;
+  dragMode = null;
+  requestRender(1);
+}
+cv.addEventListener('pointerup', endDrag);
+cv.addEventListener('pointercancel', endDrag);
+cv.addEventListener('pointerleave', () => { cursorWorld = null; updateReadout(); });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+
+let wheelTimer = 0;
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const [wx, wy] = screenToWorld(e);
+  const rect = cv.getBoundingClientRect();
+  const px = e.clientX - rect.left, py = e.clientY - rect.top;
+  const factor = Math.exp(-e.deltaY * 0.0012);
+  const scale = Math.max(4, Math.min(800, state.view.scale * factor));
+  state.view.scale = scale;
+  state.view.cx = wx - (px - cw / 2) / scale;
+  state.view.cy = wy + (py - chh / 2) / scale;
+  requestRender(0.5);
+  clearTimeout(wheelTimer);                 // full quality once the wheel rests
+  wheelTimer = setTimeout(() => requestRender(1), 160);
+}, { passive: false });
+
+syncMetricPanel();
+updateReadout();
+resize();
+</script>
+</body>
+</html>
