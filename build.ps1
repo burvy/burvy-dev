@@ -13,6 +13,7 @@
 #                                       deploy\server.exe        the chat server
 #                                       deploy\amity-server.exe
 #                                       deploy\sandbags-server.exe
+#                                       deploy\sandbags\         Sandbags' server-PC bundle (update.ps1)
 #                                       deploy\floret-server.exe
 #                                       deploy\plgroup-server.exe
 #                                       deploy\rambl-server.exe   (Rambl: its web bundle is built first)
@@ -180,6 +181,37 @@ function Publish-SandbagsVersion {
     Write-Host '  Ship order: the sandbags server first (restart it), then the site files. Old tabs reload once the new version.json is up.'
 }
 
+# Sandbags (task 274): deploy\sandbags\, the bundle that sandbags' update.ps1 installs on
+# the server PC: the server exe with its sha256 and build id, ONLY the site's sandbags
+# folder (module + version.json; update.ps1 publishes nothing else), and the server-PC
+# scripts from sandbags\tools\deploy\windows. Needs Publish-SandbagsVersion first.
+function New-SandbagsBundle {
+    param([string] $SiteDir, [string] $ServerExe, [string] $BundleDir)
+    $versionFile = Join-Path $SiteDir 'sandbags\version.json'
+    if (-not (Test-Path $versionFile) -or -not (Test-Path $ServerExe)) { return }
+    $build = (Get-Content $versionFile -Raw | ConvertFrom-Json).build
+    # the hostname the module dials is baked in at build time (SB_SERVER_HOST, default in
+    # sandbags protocol/src/net/config.rs); a module dialing another name than the
+    # server's certificate connects nowhere
+    $dialHost = if ($env:SB_SERVER_HOST) { $env:SB_SERVER_HOST } else { 'sandbags.burvy.dev' }
+    $wasm = Join-Path $SiteDir 'sandbags\sandbags-wasm_bg.wasm'
+    $text = [System.Text.Encoding]::GetEncoding(28591).GetString([System.IO.File]::ReadAllBytes($wasm))
+    if (-not $text.Contains($dialHost)) {
+        throw "the sandbags module doesn't contain '$dialHost', the host it should dial. Was it built with another SB_SERVER_HOST?"
+    }
+    Remove-Item -Recurse -Force $BundleDir -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force (Join-Path $BundleDir 'site'), (Join-Path $BundleDir 'scripts') | Out-Null
+    Copy-Item -Force $ServerExe (Join-Path $BundleDir 'sandbags-server.exe')
+    Set-Content -Encoding ASCII (Join-Path $BundleDir 'build.txt') $build
+    Set-Content -Encoding ASCII (Join-Path $BundleDir 'sha256.txt') (Get-FileHash -LiteralPath $ServerExe -Algorithm SHA256).Hash
+    Copy-Item -Recurse -Force (Join-Path $SiteDir 'sandbags') (Join-Path $BundleDir 'site\sandbags')
+    $scripts = Join-Path $PSScriptRoot '..\sandbags\tools\deploy\windows'
+    if (-not (Test-Path $scripts)) { throw "missing $scripts (sandbags checkout beside burvy-dev)" }
+    Copy-Item -Force (Join-Path $scripts '*.ps1') (Join-Path $BundleDir 'scripts')
+    Write-Host "  sandbags: bundle for the server PC in $BundleDir (build $build, dials $dialHost)" -ForegroundColor Green
+    Write-Host '  On the server PC: powershell -NoProfile -ExecutionPolicy Bypass -File <bundle>\scripts\update.ps1'
+}
+
 # ---- wasm modules. Only the ones being rebuilt are cleared: the site copies
 # whatever is in assets\, so the others keep their last build
 foreach ($module in $Modules) {
@@ -227,6 +259,7 @@ if ($Deploy) {
 
     Build-Servers -DestDir $deployDir -Release
     Publish-SandbagsVersion -SiteDir $siteDir -ServerExe (Join-Path $deployDir 'sandbags-server.exe')
+    New-SandbagsBundle -SiteDir $siteDir -ServerExe (Join-Path $deployDir 'sandbags-server.exe') -BundleDir (Join-Path $deployDir 'sandbags')
 }
 
 # ---- just some servers, added to whatever deploy\ already holds
