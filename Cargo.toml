@@ -39,3 +39,10 @@ web-sys = { version = "0.3.102", features = [
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.4", features = ["wasm_js"] }
+
+# sandbags vendors two patched crates; [patch] only applies at a workspace root,
+# so the sandbags-wasm build needs the same lines here (only sandbags uses these
+# versions: avian3d 0.8.0, lightyear_webtransport 0.31.0)
+[patch.crates-io]
+avian3d = { path = "../sandbags/vendor/avian3d" }
+lightyear_webtransport = { path = "../sandbags/vendor/lightyear_webtransport" }
