@@ -166,14 +166,14 @@ function Publish-SandbagsVersion {
     if ($LASTEXITCODE -ne 0 -or $build -notmatch '^[0-9a-f]{16}$') {
         throw "sandbags-server --build-id gave '$build' (exit $LASTEXITCODE), expected 16 hex digits"
     }
-    # the id is ASCII text in the module's data; Latin1 maps every byte to one char
+    # the id is ASCII text in the module's data; Latin-1 (code page 28591) maps every byte
+    # to one char. GetEncoding and Get-FileHash work in Windows PowerShell 5.1 as well as 7
     $bytes = [System.IO.File]::ReadAllBytes($wasm)
-    if (-not [System.Text.Encoding]::Latin1.GetString($bytes).Contains($build)) {
+    if (-not [System.Text.Encoding]::GetEncoding(28591).GetString($bytes).Contains($build)) {
         throw ("the sandbags module $wasm is not build $build, the build of $ServerExe. " +
             'Its players would be refused. Build sandbags-wasm and sandbags-server from the same sandbags checkout (both are in a plain -Deploy).')
     }
-    $sha = [System.Security.Cryptography.SHA256]::HashData($bytes)
-    $module = (-join ($sha | ForEach-Object { $_.ToString('x2') })).Substring(0, 16)
+    $module = (Get-FileHash -LiteralPath $wasm -Algorithm SHA256).Hash.Substring(0, 16).ToLowerInvariant()
     $json = '{"build":"' + $build + '","module":"' + $module + '"}'
     [System.IO.File]::WriteAllText((Join-Path $moduleDir 'version.json'), $json + "`n")
     Write-Host "  sandbags: build $build, module $module -> sandbags\version.json" -ForegroundColor Green
