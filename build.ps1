@@ -143,6 +143,43 @@ function Build-Servers {
 
 $overall = [System.Diagnostics.Stopwatch]::StartNew()
 
+# Sandbags (task 273): checks the site's sandbags module is the same build as the
+# sandbags server going out with it, and publishes that build beside the module as
+# sandbags\version.json. The game reads it after a failed connect (a stale tab after
+# an update reloads itself once), and the site loads the module as
+# sandbags-wasm.js?v=<module> from it, so no cache can serve an old one.
+#   build:  the server's build id (`sandbags-server --build-id`); a client of another
+#           build is refused, so the module must embed the same id (it shows it in its
+#           could-not-connect text, which is how this finds it)
+#   module: the first 16 hex of the wasm's sha256, so a client-only change, which keeps
+#           the build id, still changes the module URL
+function Publish-SandbagsVersion {
+    param([string] $SiteDir, [string] $ServerExe)
+    $moduleDir = Join-Path $SiteDir 'sandbags'
+    $wasm = Join-Path $moduleDir 'sandbags-wasm_bg.wasm'
+    if (-not (Test-Path $wasm)) { return }
+    if (-not (Test-Path $ServerExe)) {
+        Write-Host "  no sandbags version.json: $ServerExe was not built (-Servers without sandbags). Deploy the sandbags module only together with its server." -ForegroundColor Yellow
+        return
+    }
+    $build = ((& $ServerExe --build-id) | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or $build -notmatch '^[0-9a-f]{16}$') {
+        throw "sandbags-server --build-id gave '$build' (exit $LASTEXITCODE), expected 16 hex digits"
+    }
+    # the id is ASCII text in the module's data; Latin-1 (code page 28591) maps every byte
+    # to one char. GetEncoding and Get-FileHash work in Windows PowerShell 5.1 as well as 7
+    $bytes = [System.IO.File]::ReadAllBytes($wasm)
+    if (-not [System.Text.Encoding]::GetEncoding(28591).GetString($bytes).Contains($build)) {
+        throw ("the sandbags module $wasm is not build $build, the build of $ServerExe. " +
+            'Its players would be refused. Build sandbags-wasm and sandbags-server from the same sandbags checkout (both are in a plain -Deploy).')
+    }
+    $module = (Get-FileHash -LiteralPath $wasm -Algorithm SHA256).Hash.Substring(0, 16).ToLowerInvariant()
+    $json = '{"build":"' + $build + '","module":"' + $module + '"}'
+    [System.IO.File]::WriteAllText((Join-Path $moduleDir 'version.json'), $json + "`n")
+    Write-Host "  sandbags: build $build, module $module -> sandbags\version.json" -ForegroundColor Green
+    Write-Host '  Ship order: the sandbags server first (restart it), then the site files. Old tabs reload once the new version.json is up.'
+}
+
 # ---- wasm modules. Only the ones being rebuilt are cleared: the site copies
 # whatever is in assets\, so the others keep their last build
 foreach ($module in $Modules) {
@@ -189,12 +226,17 @@ if ($Deploy) {
     }
 
     Build-Servers -DestDir $deployDir -Release
+    Publish-SandbagsVersion -SiteDir $siteDir -ServerExe (Join-Path $deployDir 'sandbags-server.exe')
 }
 
 # ---- just some servers, added to whatever deploy\ already holds
 if ($ServersOnly) {
     New-Item -ItemType Directory -Path $deployDir -Force | Out-Null
     Build-Servers -DestDir $deployDir -Release
+    if ($Servers -contains 'sandbags') {
+        Write-Host ("  sandbags: a new server build refuses the site's current module if the shared code changed, and that tab would only say 'not reachable'. " +
+            'Ship it with a plain -Deploy so the module and version.json go out with it.') -ForegroundColor Yellow
+    }
 }
 
 $overall.Stop()
