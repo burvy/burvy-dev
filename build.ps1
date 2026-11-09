@@ -26,6 +26,15 @@
 #                                   repo (default ..\ai-todo). Ship from a clean
 #                                   checkout of origin/main: the build takes whatever
 #                                   that folder holds, branch and edits included
+#   .\build.ps1 -Sandbags          ONLY Sandbags' server-PC bundle, deploy\sandbags\: the
+#                                   sandbags module (into assets\sandbags\) and the release
+#                                   sandbags-server, nothing else (no site, statesmc or
+#                                   other servers; the rest of deploy\ is left as it is).
+#                                   For shipping a Sandbags update on its own: the live
+#                                   site must already load the module by version.json
+#                                   (sandbags task 273; any -Deploy since then does).
+#                                   -WasmTargetDir <dir> builds the module in another
+#                                   cargo target (e.g. a warm one when run from a worktree)
 #   .\build.ps1 -ServersOnly -Servers plgroup
 #                                   just those servers' release exes into deploy\,
 #                                   leaving everything else in deploy\ as it is
@@ -46,7 +55,9 @@ param(
     [string] $RamblDir = '..\ai-todo',
     [switch] $Deploy,
     [switch] $Dev,
-    [switch] $ServersOnly
+    [switch] $ServersOnly,
+    [switch] $Sandbags,
+    [string] $WasmTargetDir
 )
 
 $ErrorActionPreference = 'Stop'
@@ -83,6 +94,7 @@ if (($Deploy -or $Dev) -and -not $PSBoundParameters.ContainsKey('Modules')) {
     $Modules = $AllModules
 }
 if ($ServersOnly) { $Modules = @() }
+if ($Sandbags -and ($Deploy -or $Dev -or $ServersOnly)) { throw '-Sandbags builds only the sandbags bundle; use it without -Deploy, -Dev or -ServersOnly' }
 
 $deployDir = Join-Path $PSScriptRoot 'deploy'
 
@@ -210,6 +222,37 @@ function New-SandbagsBundle {
     Copy-Item -Force (Join-Path $scripts '*.ps1') (Join-Path $BundleDir 'scripts')
     Write-Host "  sandbags: bundle for the server PC in $BundleDir (build $build, dials $dialHost)" -ForegroundColor Green
     Write-Host '  On the server PC: powershell -NoProfile -ExecutionPolicy Bypass -File <bundle>\scripts\update.ps1'
+}
+
+# ---- -Sandbags: only what deploy\sandbags\ ships (the module, the server, the scripts)
+if ($Sandbags) {
+    # the module is copied into the bundle straight from assets\sandbags\ (where its own
+    # Trunk.toml puts it): the site build would only copy it on into dist\
+    Time-Step 'sandbags-wasm' {
+        Remove-Item -Recurse -Force 'assets\sandbags' -ErrorAction SilentlyContinue
+        Push-Location 'crates\sandbags-wasm'
+        # only for this step: the server build below must keep sandbags' own target-dir
+        if ($WasmTargetDir) { $env:CARGO_TARGET_DIR = $WasmTargetDir }
+        try {
+            trunk build --release -v
+            if ($LASTEXITCODE -ne 0) { throw 'sandbags-wasm build failed' }
+        } finally {
+            if ($WasmTargetDir) { Remove-Item Env:CARGO_TARGET_DIR -ErrorAction SilentlyContinue }
+            Pop-Location
+        }
+    }
+    New-Item -ItemType Directory -Path $deployDir -Force | Out-Null
+    $Servers = @('sandbags')
+    Build-Servers -DestDir $deployDir -Release
+    $serverExe = Join-Path $deployDir 'sandbags-server.exe'
+    Publish-SandbagsVersion -SiteDir (Join-Path $PSScriptRoot 'assets') -ServerExe $serverExe
+    if (-not (Test-Path 'assets\sandbags\version.json')) { throw 'no assets\sandbags\version.json: the module or the server is missing' }
+    New-SandbagsBundle -SiteDir (Join-Path $PSScriptRoot 'assets') -ServerExe $serverExe -BundleDir (Join-Path $deployDir 'sandbags')
+    $overall.Stop()
+    Write-Host "`nBuild times:"
+    foreach ($key in $timings.Keys) { Write-Host ('  {0,-20} {1,8:N1}s' -f $key, $timings[$key].TotalSeconds) }
+    Write-Host ('  {0,-20} {1,8:N1}s' -f 'TOTAL', $overall.Elapsed.TotalSeconds)
+    return
 }
 
 # ---- wasm modules. Only the ones being rebuilt are cleared: the site copies
