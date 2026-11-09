@@ -13,6 +13,7 @@
 #                                       deploy\server.exe        the chat server
 #                                       deploy\amity-server.exe
 #                                       deploy\sandbags-server.exe
+#                                       deploy\sandbags\         Sandbags' server-PC bundle (update.ps1)
 #                                       deploy\floret-server.exe
 #                                       deploy\plgroup-server.exe
 #                                       deploy\rambl-server.exe   (Rambl: its web bundle is built first)
@@ -25,6 +26,15 @@
 #                                   repo (default ..\ai-todo). Ship from a clean
 #                                   checkout of origin/main: the build takes whatever
 #                                   that folder holds, branch and edits included
+#   .\build.ps1 -Sandbags          ONLY Sandbags' server-PC bundle, deploy\sandbags\: the
+#                                   sandbags module (into assets\sandbags\) and the release
+#                                   sandbags-server, nothing else (no site, statesmc or
+#                                   other servers; the rest of deploy\ is left as it is).
+#                                   For shipping a Sandbags update on its own: the live
+#                                   site must already load the module by version.json
+#                                   (sandbags task 273; any -Deploy since then does).
+#                                   -WasmTargetDir <dir> builds the module in another
+#                                   cargo target (e.g. a warm one when run from a worktree)
 #   .\build.ps1 -ServersOnly -Servers plgroup
 #                                   just those servers' release exes into deploy\,
 #                                   leaving everything else in deploy\ as it is
@@ -45,7 +55,9 @@ param(
     [string] $RamblDir = '..\ai-todo',
     [switch] $Deploy,
     [switch] $Dev,
-    [switch] $ServersOnly
+    [switch] $ServersOnly,
+    [switch] $Sandbags,
+    [string] $WasmTargetDir
 )
 
 $ErrorActionPreference = 'Stop'
@@ -82,6 +94,7 @@ if (($Deploy -or $Dev) -and -not $PSBoundParameters.ContainsKey('Modules')) {
     $Modules = $AllModules
 }
 if ($ServersOnly) { $Modules = @() }
+if ($Sandbags -and ($Deploy -or $Dev -or $ServersOnly)) { throw '-Sandbags builds only the sandbags bundle; use it without -Deploy, -Dev or -ServersOnly' }
 
 $deployDir = Join-Path $PSScriptRoot 'deploy'
 
@@ -180,6 +193,68 @@ function Publish-SandbagsVersion {
     Write-Host '  Ship order: the sandbags server first (restart it), then the site files. Old tabs reload once the new version.json is up.'
 }
 
+# Sandbags (task 274): deploy\sandbags\, the bundle that sandbags' update.ps1 installs on
+# the server PC: the server exe with its sha256 and build id, ONLY the site's sandbags
+# folder (module + version.json; update.ps1 publishes nothing else), and the server-PC
+# scripts from sandbags\tools\deploy\windows. Needs Publish-SandbagsVersion first.
+function New-SandbagsBundle {
+    param([string] $SiteDir, [string] $ServerExe, [string] $BundleDir)
+    $versionFile = Join-Path $SiteDir 'sandbags\version.json'
+    if (-not (Test-Path $versionFile) -or -not (Test-Path $ServerExe)) { return }
+    $build = (Get-Content $versionFile -Raw | ConvertFrom-Json).build
+    # the hostname the module dials is baked in at build time (SB_SERVER_HOST, default in
+    # sandbags protocol/src/net/config.rs); a module dialing another name than the
+    # server's certificate connects nowhere
+    $dialHost = if ($env:SB_SERVER_HOST) { $env:SB_SERVER_HOST } else { 'sandbags.burvy.dev' }
+    $wasm = Join-Path $SiteDir 'sandbags\sandbags-wasm_bg.wasm'
+    $text = [System.Text.Encoding]::GetEncoding(28591).GetString([System.IO.File]::ReadAllBytes($wasm))
+    if (-not $text.Contains($dialHost)) {
+        throw "the sandbags module doesn't contain '$dialHost', the host it should dial. Was it built with another SB_SERVER_HOST?"
+    }
+    Remove-Item -Recurse -Force $BundleDir -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force (Join-Path $BundleDir 'site'), (Join-Path $BundleDir 'scripts') | Out-Null
+    Copy-Item -Force $ServerExe (Join-Path $BundleDir 'sandbags-server.exe')
+    Set-Content -Encoding ASCII (Join-Path $BundleDir 'build.txt') $build
+    Set-Content -Encoding ASCII (Join-Path $BundleDir 'sha256.txt') (Get-FileHash -LiteralPath $ServerExe -Algorithm SHA256).Hash
+    Copy-Item -Recurse -Force (Join-Path $SiteDir 'sandbags') (Join-Path $BundleDir 'site\sandbags')
+    $scripts = Join-Path $PSScriptRoot '..\sandbags\tools\deploy\windows'
+    if (-not (Test-Path $scripts)) { throw "missing $scripts (sandbags checkout beside burvy-dev)" }
+    Copy-Item -Force (Join-Path $scripts '*.ps1') (Join-Path $BundleDir 'scripts')
+    Write-Host "  sandbags: bundle for the server PC in $BundleDir (build $build, dials $dialHost)" -ForegroundColor Green
+    Write-Host '  On the server PC: powershell -NoProfile -ExecutionPolicy Bypass -File <bundle>\scripts\update.ps1'
+}
+
+# ---- -Sandbags: only what deploy\sandbags\ ships (the module, the server, the scripts)
+if ($Sandbags) {
+    # the module is copied into the bundle straight from assets\sandbags\ (where its own
+    # Trunk.toml puts it): the site build would only copy it on into dist\
+    Time-Step 'sandbags-wasm' {
+        Remove-Item -Recurse -Force 'assets\sandbags' -ErrorAction SilentlyContinue
+        Push-Location 'crates\sandbags-wasm'
+        # only for this step: the server build below must keep sandbags' own target-dir
+        if ($WasmTargetDir) { $env:CARGO_TARGET_DIR = $WasmTargetDir }
+        try {
+            trunk build --release -v
+            if ($LASTEXITCODE -ne 0) { throw 'sandbags-wasm build failed' }
+        } finally {
+            if ($WasmTargetDir) { Remove-Item Env:CARGO_TARGET_DIR -ErrorAction SilentlyContinue }
+            Pop-Location
+        }
+    }
+    New-Item -ItemType Directory -Path $deployDir -Force | Out-Null
+    $Servers = @('sandbags')
+    Build-Servers -DestDir $deployDir -Release
+    $serverExe = Join-Path $deployDir 'sandbags-server.exe'
+    Publish-SandbagsVersion -SiteDir (Join-Path $PSScriptRoot 'assets') -ServerExe $serverExe
+    if (-not (Test-Path 'assets\sandbags\version.json')) { throw 'no assets\sandbags\version.json: the module or the server is missing' }
+    New-SandbagsBundle -SiteDir (Join-Path $PSScriptRoot 'assets') -ServerExe $serverExe -BundleDir (Join-Path $deployDir 'sandbags')
+    $overall.Stop()
+    Write-Host "`nBuild times:"
+    foreach ($key in $timings.Keys) { Write-Host ('  {0,-20} {1,8:N1}s' -f $key, $timings[$key].TotalSeconds) }
+    Write-Host ('  {0,-20} {1,8:N1}s' -f 'TOTAL', $overall.Elapsed.TotalSeconds)
+    return
+}
+
 # ---- wasm modules. Only the ones being rebuilt are cleared: the site copies
 # whatever is in assets\, so the others keep their last build
 foreach ($module in $Modules) {
@@ -227,6 +302,7 @@ if ($Deploy) {
 
     Build-Servers -DestDir $deployDir -Release
     Publish-SandbagsVersion -SiteDir $siteDir -ServerExe (Join-Path $deployDir 'sandbags-server.exe')
+    New-SandbagsBundle -SiteDir $siteDir -ServerExe (Join-Path $deployDir 'sandbags-server.exe') -BundleDir (Join-Path $deployDir 'sandbags')
 }
 
 # ---- just some servers, added to whatever deploy\ already holds
