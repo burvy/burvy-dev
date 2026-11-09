@@ -21,6 +21,15 @@
 #                                   only some modules (-Modules @() for none: the
 #                                   modules already built go in)
 #   .\build.ps1 -Deploy -Servers amity    only some servers (chat, amity, sandbags, floret, plgroup, primer, rambl)
+#   .\build.ps1 -Deploy -SkipStatesmc     everything but the StatesMC site (deploy\statesmc\ is
+#                                   left out)
+#   .\build.ps1 -Deploy -KeepGoing        a module, server or the StatesMC site that fails
+#                                   to build is skipped instead of stopping the build;
+#                                   the end lists each one with its error (and -Deploy
+#                                   writes the list to deploy\SKIPPED.txt). A failing
+#                                   site build still stops it
+#                                   -Deploy also copies PORTS.md (which ports each server
+#                                   needs open on the server machine) into deploy\
 #   .\build.ps1 -Deploy -Servers rambl -RamblDir ..\ai-todo-release
 #                                   Rambl from another checkout, relative to this
 #                                   repo (default ..\ai-todo). Ship from a clean
@@ -57,7 +66,9 @@ param(
     [switch] $Dev,
     [switch] $ServersOnly,
     [switch] $Sandbags,
-    [string] $WasmTargetDir
+    [string] $WasmTargetDir,
+    [switch] $SkipStatesmc,
+    [switch] $KeepGoing
 )
 
 $ErrorActionPreference = 'Stop'
@@ -114,6 +125,20 @@ function Time-Step {
     $timings[$Name] = $sw.Elapsed
 }
 
+# One part of the build (a module, a server, the StatesMC site). With -KeepGoing a failure
+# is recorded in $skipped and the build goes on; without it the failure stops the build.
+$skipped = [ordered]@{}
+function Invoke-Part {
+    param([string] $Name, [scriptblock] $Body)
+    if (-not $KeepGoing) { & $Body; return }
+    try {
+        & $Body
+    } catch {
+        $skipped[$Name] = "$_"
+        Write-Host "  SKIPPED $Name`: $_" -ForegroundColor Yellow
+    }
+}
+
 # Builds each server named in -Servers and copies its exe into $DestDir.
 # -Release builds with --release; otherwise with the server's own DevArgs.
 function Build-Servers {
@@ -133,7 +158,7 @@ function Build-Servers {
         $cargoArgs = @(if ($Release) { '--release' } else { $server.DevArgs })
 
         Write-Host "`n==> building $($server.Package) ($profileDir)" -ForegroundColor Cyan
-        Time-Step $server.Package {
+        Invoke-Part $server.Package { Time-Step $server.Package {
             if ($server.Prebuild) { & $server.Prebuild }
             Push-Location $dir
             try {
@@ -150,7 +175,7 @@ function Build-Servers {
             if (-not (Test-Path $exe)) { $exe = Join-Path $targetDir "$profileDir\$($server.Package).exe" }
             if (-not (Test-Path $exe)) { throw "expected $($server.Package) at $exe" }
             Copy-Item -Force $exe (Join-Path $DestDir "$($server.Package).exe")
-        }
+        } }
     }
 }
 
@@ -258,7 +283,7 @@ if ($Sandbags) {
 # ---- wasm modules. Only the ones being rebuilt are cleared: the site copies
 # whatever is in assets\, so the others keep their last build
 foreach ($module in $Modules) {
-    Time-Step $module {
+    Invoke-Part $module { Time-Step $module {
         Remove-Item -Recurse -Force ('assets\' + ($module -replace '-wasm$', '')) -ErrorAction SilentlyContinue
         Push-Location "crates\$module"
         try {
@@ -267,7 +292,7 @@ foreach ($module in $Modules) {
         } finally {
             Pop-Location
         }
-    }
+    } }
 }
 
 # ---- the site (-Dev serves it instead, below, so it can watch for changes)
@@ -286,7 +311,8 @@ if ($Deploy) {
     Copy-Item -Recurse -Force 'dist\*' $siteDir
 
     # statesmc.us: a separate site, built straight into its own deploy folder
-    Time-Step 'statesmc' {
+    if ($SkipStatesmc) { Write-Host "`n  statesmc: skipped (-SkipStatesmc)" -ForegroundColor Yellow }
+    else { Invoke-Part 'statesmc' { Time-Step 'statesmc' {
         Push-Location 'crates\statesmc'
         # its own target folder: trunk shares target\wasm-bindgen\ across the workspace,
         # and would otherwise pull burvy-dev's js snippets into statesmc's index.html
@@ -298,11 +324,16 @@ if ($Deploy) {
             Remove-Item Env:CARGO_TARGET_DIR -ErrorAction SilentlyContinue
             Pop-Location
         }
-    }
+    } } }
 
     Build-Servers -DestDir $deployDir -Release
-    Publish-SandbagsVersion -SiteDir $siteDir -ServerExe (Join-Path $deployDir 'sandbags-server.exe')
-    New-SandbagsBundle -SiteDir $siteDir -ServerExe (Join-Path $deployDir 'sandbags-server.exe') -BundleDir (Join-Path $deployDir 'sandbags')
+    Invoke-Part 'sandbags bundle' {
+        Publish-SandbagsVersion -SiteDir $siteDir -ServerExe (Join-Path $deployDir 'sandbags-server.exe')
+        New-SandbagsBundle -SiteDir $siteDir -ServerExe (Join-Path $deployDir 'sandbags-server.exe') -BundleDir (Join-Path $deployDir 'sandbags')
+    }
+
+    # which ports each server needs open on the server machine
+    Copy-Item -Force (Join-Path $PSScriptRoot 'PORTS.md') $deployDir
 }
 
 # ---- just some servers, added to whatever deploy\ already holds
@@ -327,6 +358,15 @@ if (-not $Dev -and -not $ServersOnly) {
     Write-Host "`nWasm in dist\:"
     Get-ChildItem dist -Recurse -Filter *.wasm |
         ForEach-Object { '  {0,-24} {1,8:N1} MB' -f $_.Name, ($_.Length / 1MB) }
+}
+
+if ($skipped.Count) {
+    Write-Host "`nSkipped (failed to build, -KeepGoing):" -ForegroundColor Yellow
+    $lines = foreach ($key in $skipped.Keys) { "- ${key}: $($skipped[$key])" }
+    $lines | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+    if ($Deploy) {
+        Set-Content -Encoding UTF8 (Join-Path $deployDir 'SKIPPED.txt') (@('Failed to build, so not in this deploy folder:') + $lines)
+    }
 }
 
 if ($Deploy) {
