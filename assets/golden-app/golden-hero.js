@@ -65,7 +65,8 @@
   function resize(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/Math.max(h,1);camera.updateProjectionMatrix();renderer.setSize(w,h,false)}
   addEventListener('resize',resize);resize();
   const codeName=c=>c===0?'Clear sky':c<=2?'Partly cloudy':c===3?'Overcast':c<=48?'Fog':c<=67?'Rain':c<=77?'Snow':c<=82?'Showers':'Storm';
-  function updateHUD(){
+  // after close() the hero (and its HUD) is removed, but weather/buildings fetches may still finish: skip them
+  function updateHUD(){if(closed)return;
     $('#hplace').textContent=state.name;
     $('#htime').textContent=new Date().toLocaleTimeString('en-US',{timeZone:state.tz,hour:'numeric',minute:'2-digit'});
     $('#hwx').textContent=state.temp==null?'Loading live weather…':`${Math.round(state.temp)}°C · ${codeName(state.code)} · ${Math.round(state.wind)} km/h wind`;
@@ -76,7 +77,7 @@
     const u=`https://api.open-meteo.com/v1/forecast?latitude=${state.lat}&longitude=${state.lon}&current=temperature_2m,weather_code,cloud_cover,wind_speed_10m&daily=sunrise,sunset&timezone=auto&forecast_days=1`;
     const r=await fetch(u);if(!r.ok)throw Error(r.status);const j=await r.json();
     Object.assign(state,{temp:j.current.temperature_2m,cloud:j.current.cloud_cover,wind:j.current.wind_speed_10m,code:j.current.weather_code,tz:j.timezone,sunrise:j.daily.sunrise[0].slice(11),sunset:j.daily.sunset[0].slice(11)});updateHUD();
-  }catch(e){$('#hwx').textContent='Weather temporarily unavailable'} }
+  }catch(e){if(!closed)$('#hwx').textContent='Weather temporarily unavailable'} }
   /* Buildings from the golden server's height map (/api/scene: Vexcel, or USGS LiDAR outside Vexcel's area).
      Ring 1 has 4 m cells over ~1 km; every cell standing 3 m or more above the local ground becomes a box. */
   // the page's API base (index.html CFG: location.origin, or origin+?api=/golden on burvy.dev)
@@ -87,6 +88,7 @@
       const get=async u=>{const r=await fetch(API+u,{signal:c.signal});if(!r.ok)throw Error(r.status);return r};
       const meta=await (await get(`/api/scene?lat=${state.lat}&lon=${state.lon}&radius_m=500&detail=phone`)).json();
       const buf=new DataView(await (await get(meta.data_url)).arrayBuffer());clearTimeout(to);
+      if(closed)return;
       const ring=meta.rings.find(r=>r.cell_m>=2)||meta.rings[meta.rings.length-1],n=ring.width,cell=ring.cell_m;
       const hs=new Float32Array(n*n);
       for(let i=0;i<n*n;i++){const v=buf.getUint16(ring.byte_offset+i*2,true);hs[i]=v===meta.nodata?NaN:v/10}
@@ -101,7 +103,7 @@
       tall.forEach(([x,z,h],i)=>{m.makeScale(1,h,1);m.setPosition(x,0,z);mesh.setMatrixAt(i,m)});
       mesh.castShadow=true;mesh.receiveShadow=true;world.add(mesh);meshes.push(mesh);
       state.attribution=meta.attribution;state.buildings=true;updateHUD();
-    }catch(e){if(!meshes.length)placeholder();state.buildings=false;updateHUD()}
+    }catch(e){if(closed)return;if(!meshes.length)placeholder();state.buildings=false;updateHUD()}
   }
   async function setLocation(loc){Object.assign(state,loc);state.temp=null;updateHUD();placeholder();await Promise.all([weather(),buildings()]);}
   async function locate(){
