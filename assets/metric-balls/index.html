@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>2D metric ball explorer</title>
+<title>2D metric ball</title>
 <style>
   :root{
     --bg:#f7f6f2; --ink:#1c2430; --line:#d8d5cc;
@@ -43,12 +43,10 @@
 <main>
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="hint">click / drag — move center c &nbsp;·&nbsp; wheel — zoom &nbsp;·&nbsp; shift-drag — pan</div>
+    <div id="hint">click / drag: move center, wheel: zoom, shift-drag: pan</div>
   </div>
   <aside>
-    <h1>2D metric ball explorer</h1>
-    <div class="sub">The open ball <i>B(c, r) = { x : d(c, x) &lt; r }</i> — same plane,
-      different distance. Formulas as in lesson&nbsp;1.</div>
+    <div class="sub">The open ball <i>B(c, r) = { x : d(c, x) &lt; r }</i></div>
 
     <label for="metric">metric</label>
     <select id="metric"></select>
@@ -59,8 +57,7 @@
         <input type="range" id="p" min="0.3" max="10" step="0.01" value="1.5">
         <output id="p-out">1.50</output>
       </div>
-      <div id="p-warn" class="warn" hidden>&#9888; p &lt; 1 — not a metric: the triangle
-        inequality fails, and the ball is not convex.</div>
+      <div id="p-warn" class="warn" hidden>&#9888; p &lt; 1: not a metric</div>
     </div>
 
     <label for="r">radius r</label>
@@ -75,9 +72,6 @@
     </div>
 
     <div class="readout" id="readout"></div>
-
-    <footer>Throwaway prototype for lesson 1 · one offline HTML file · every pixel is
-      coloured by evaluating d(c, x) &lt; r; rings are contours of d(c, ·) at 2r, 3r, 4r.</footer>
   </aside>
 </main>
 
@@ -102,19 +96,19 @@ const state = {
 /* ------------------------------------------------------------------ */
 const METRICS = [
   {
-    id: 'l1', label: 'Taxicab · L1',
+    id: 'l1', label: 'Taxicab: L1',
     formula: 'd(x, y) = |x₁ − y₁| + |x₂ − y₂|',
     explain: 'Distance walking along city blocks.',
     make(c) { return (x, y) => Math.abs(x - c[0]) + Math.abs(y - c[1]); },
   },
   {
-    id: 'l2', label: 'Euclidean · L2',
+    id: 'l2', label: 'Euclidean: L2',
     formula: 'd(x, y) = √((x₁ − y₁)² + (x₂ − y₂)²)',
-    explain: 'The ruler distance.',
+    explain: 'Normal distance.',
     make(c) { return (x, y) => Math.hypot(x - c[0], y - c[1]); },
   },
   {
-    id: 'linf', label: 'Chebyshev · L∞',
+    id: 'linf', label: 'Chebyshev: L∞',
     formula: 'd(x, y) = max(|x₁ − y₁|, |x₂ − y₂|)',
     explain: 'How many moves a chess king needs.',
     make(c) {
@@ -122,9 +116,9 @@ const METRICS = [
     },
   },
   {
-    id: 'lp', label: 'Lp family · slider for p',
+    id: 'lp', label: 'Lp',
     formula: 'd(x, y) = (|x₁ − y₁|<sup>p</sup> + |x₂ − y₂|<sup>p</sup>)<sup>1/p</sup>',
-    explain: 'One family containing everything above: p = 1 is taxicab, p = 2 is Euclidean, p → ∞ is Chebyshev.',
+    explain: 'Lp family contains Taxicab, Euclidian, Chebyshev',
     make(c, p) {
       const inv = 1 / p;
       return (x, y) => {
@@ -135,8 +129,8 @@ const METRICS = [
   },
   {
     id: 'discrete', label: 'Discrete',
-    formula: 'd(x, y) = 0 if x = y, and 1 otherwise',
-    explain: 'Every ball of radius < 1 is a single point (just the marker c); every ball of radius > 1 is the whole plane.',
+    formula: 'd(x, y) = 0 if x = y, 1 otherwise',
+    explain: 'Balls radius < 1 is a point at the center, otherwise they are the whole plane',
     flat: true,   // d only takes the values 0 and 1 — bands and contour rings are meaningless
     make(c) {
       return (x, y) => (x === c[0] && y === c[1]) ? 0 : 1;
@@ -144,8 +138,8 @@ const METRICS = [
   },
   {
     id: 'postoffice', label: 'Post office',
-    formula: 'd(x, y) = |x| + |y| if x ≠ y, and 0 if x = y',
-    explain: 'All mail travels through the central office at the origin (|·| is Euclidean length).',
+    formula: 'd(x, y) = |x| + |y| if x != y, and 0 if x = y',
+    explain: 'All mail travels through the central office at the origin.',
     make(c) {
       const n = Math.hypot(c[0], c[1]);
       return (x, y) => (x === c[0] && y === c[1]) ? 0 : n + Math.hypot(x, y);
@@ -153,8 +147,8 @@ const METRICS = [
   },
   {
     id: 'railway', label: 'French railway',
-    formula: 'd(x, y) = |x − y| on the same line through 0,<br>otherwise |x| + |y|',
-    explain: 'Every train goes through Paris (the origin) — unless you are already on the same line through it (dashed).',
+    formula: 'd(x, y) = |x − y| on the same line through 0, <br>otherwise |x| + |y|',
+    explain: 'Every train goes through the origin unless you are already on the same line through it.',
     make(c) {
       const n = Math.hypot(c[0], c[1]);
       if (n === 0) return (x, y) => Math.hypot(x, y);   // c = 0: both branches agree, d = |x|
@@ -168,10 +162,10 @@ const METRICS = [
     },
   },
   {
-    id: 'hyperbolic', label: 'Hyperbolic · Poincaré pulled back',
+    id: 'hyperbolic', label: 'Hyperbolic',
     formula: 'u = f(x), v = f(y), &nbsp;f(z) = tanh(|z|/2)·z/|z|<br>' +
              'd(x, y) = arcosh(1 + 2|u − v|² ∕ ((1 − |u|²)(1 − |v|²)))',
-    explain: 'Hyperbolic distance on the Poincaré disk, pulled back onto the whole plane by f. Nice detail: d(0, x) = |x| exactly.',
+    explain: 'Hyperbolic distance on the Poincaré disk pulled back onto the whole plane by f.',
     heavy: true,   // per-pixel cost is high — cap the render resolution a bit
     make(c) {
       const n0 = Math.hypot(c[0], c[1]);
@@ -195,10 +189,10 @@ const METRICS = [
     },
   },
   {
-    id: 'spherical', label: 'Spherical · inverse stereographic',
-    formula: 'σ(z) = (2z, |z|² − 1) ∕ (|z|² + 1) ∈ S²<br>' +
+    id: 'spherical', label: 'Spherical',
+    formula: 'σ(z) = (2z, |z|² − 1) / (|z|² + 1) ∈ S²<br>' +
              'd(x, y) = arccos(σ(x) · σ(y))',
-    explain: 'The plane wrapped onto a sphere missing one point; d is great-circle distance. Push r past π ≈ 3.14 and the ball is everything.',
+    explain: 'The plane wrapped onto a sphere missing one point. d is great-circle distance.',
     heavy: true,
     make(c) {
       const n2 = c[0] * c[0] + c[1] * c[1], D = n2 + 1;

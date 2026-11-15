@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>Lp ball · WebGL2 raymarcher prototype</title>
+<title>Lp Ball</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0e14; }
   canvas { display: block; width: 100vw; height: 100vh; touch-action: none; cursor: grab; }
@@ -38,14 +38,13 @@
 <body>
 <canvas id="c"></canvas>
 <div id="ui">
-  <h1>Lp ball — raymarched level set</h1>
   <div class="formula" id="formula"></div>
   <div class="row"><label>p</label><input type="range" id="pSlider" min="0" max="1000" value="366"><span class="val" id="pVal"></span></div>
-  <div class="row"><label>&nbsp;</label><input type="checkbox" id="pInf"><label for="pInf" style="flex:none; color:#9fb0c6">p = ∞ (max norm)</label></div>
+  <div class="row"><label>&nbsp;</label><input type="checkbox" id="pInf"><label for="pInf" style="flex:none; color:#9fb0c6">p = ∞</label></div>
   <div class="row"><label>radius r</label><input type="range" id="rSlider" min="0.4" max="2.2" step="0.01" value="1.0"><span class="val" id="rVal"></span></div>
   <div class="checks">
     <div class="row"><label>slice z</label><input type="range" id="zSlider" min="-2.4" max="2.4" step="0.01" value="0"><span class="val" id="zVal"></span></div>
-    <div class="row"><input type="checkbox" id="planeOn" checked><label for="planeOn" style="flex:none; color:#9fb0c6">slice plane (heatmap)</label></div>
+    <div class="row"><input type="checkbox" id="planeOn" checked><label for="planeOn" style="flex:none; color:#9fb0c6">slice plane</label></div>
     <div class="row"><input type="checkbox" id="cutOn" checked><label for="cutOn" style="flex:none; color:#9fb0c6">cut ball at plane</label></div>
     <div class="row"><label>march steps</label>
       <select id="quality">
@@ -58,7 +57,7 @@
   </div>
 </div>
 <div id="stats"></div>
-<div id="hint">drag: orbit · wheel / pinch: zoom</div>
+<div id="hint">drag: orbit, wheel / pinch: zoom</div>
 <div id="err"></div>
 
 <script>

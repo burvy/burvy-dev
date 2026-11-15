@@ -132,15 +132,15 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/sandbags",
     },
     Experience {
-        name: "Metric Balls",
+        name: "2D Metric Balls",
         background: "images/metric-balls.png",
-        description: "a demo of balls in nine different metrics",
+        description: "balls in different metrics",
         path: "/metric-balls",
     },
     Experience {
-        name: "Lp Spheres",
+        name: "3D Lp Balls",
         background: "images/lp-sphere.png",
-        description: "a demo of Lp spheres in 3D",
+        description: "Lp balls in 3 dimensions",
         path: "/lp-sphere",
     },
 ];
