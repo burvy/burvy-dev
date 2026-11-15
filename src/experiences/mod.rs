@@ -53,13 +53,6 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/primer",
     },
     Experience {
-        name: "Golden",
-        // placeholder image, to be drawn (2000x1000)
-        background: "images/golden.png",
-        description: "finds where and when to film the golden hour: sun, horizon and rooftops on a map (BACKEND OFFLINE)",
-        path: "/golden",
-    },
-    Experience {
         name: "Rambl",
         background: "images/rambl.png",
         description: "ramble your day at it, and it writes your to-do list and plans your week (made with Jev at c0mpiled-15) (BACKEND OFFLINE)",
@@ -70,6 +63,13 @@ pub const EXPERIENCES: &[Experience] = &[
         background: "images/halcyon.png",
         description: "a real multiplayer game iterated quickly in godot (BACKEND OFFLINE)",
         path: "/halcyon",
+    },
+    Experience {
+        name: "Golden",
+        // placeholder image, to be drawn (2000x1000)
+        background: "images/golden.png",
+        description: "finds where and when to film the golden hour: sun, horizon and rooftops on a map",
+        path: "/golden",
     },
     Experience {
         name: "Test",

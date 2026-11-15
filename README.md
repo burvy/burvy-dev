@@ -310,18 +310,25 @@ LiDAR, Google) and serves only what is in its cache, downtown LA and Princeton (
 fetched during the hackathon). Elsewhere it answers with a clear "not available offline".
 
 Checklist (all on the server PC unless it says otherwise):
-1. **CoStar licence first.** The CoStar data kit (`COSTAR_KIT_DIR`) was given for the
-hackathon. Before anything is public, check that its licence allows showing its building
-data (names, contacts) on a public site. If it doesn't, leave `COSTAR_KIT_DIR` unset
-(golden then shows no building names or contacts; everything else works).
-2. **Build** (dev PC): pull golden's `main` in `Z:\3Projects\golden`, then
-`.\build.ps1 -Deploy` here (or `.\menu.ps1` and pick `golden-server`). It puts
+1. **No CoStar on the public server, on purpose.** The CoStar data kit was licensed for the
+hackathon only, so it never goes to the server PC and `COSTAR_KIT_DIR` stays unset there.
+Golden then has no CoStar building names or contacts (call sheets just have no contacts, and
+`/api/buildings` gives empty lists); search, chat, objects found in the cached Vexcel
+detections, photos and 3D all work.
+2. **Build** (dev PC): pull golden's `main` in `Z:\3Projects\golden` (at least `2b80c28`, the
+version tested for going live: 041's guards, 053's cached detections and the cost-function
+library with its 11 lab entries), then `.\build.ps1 -Deploy` here (or
+`.\build.ps1 -ServersOnly -Servers golden`, or `.\menu.ps1` and pick `golden-server`). It puts
 `deploy\golden-server.exe` beside the other servers. (Golden's own name for it is
 `server.exe`; it is renamed because `deploy\server.exe` is the chat server.) It needs no other
-files: the cost-function library is built into it.
+files: the cost-function library is built into it. The exe has no `--version`, so note the
+golden commit you built from (`git -C Z:\3Projects\golden log -1 --oneline`); the server PC
+records it in its setup report.
 3. **Folder**: copy `golden-server.exe` to `C:\burvy\golden\`.
-4. **Cache**: copy golden's cache (on the dev PC `Z:\3Projects\golden-cache`) to
-`C:\burvy\data\golden\cache\`.
+4. **Cache**: copy golden's cache (on the dev PC `Z:\3Projects\golden-cache`, about 2.4 GB) to
+`C:\burvy\data\golden\cache\`. All of `vexcel\` (heights, 3D mesh, map, photos, and
+`vexcel\detect`, the cached object detections that object chats use) and `lidar\` is needed;
+`scene\` can be left out (rebuilt on demand).
 5. **Keys** live on the server PC only, **never** in either repo. **No** Vexcel key (no
 `VEXCEL_API_KEY`, no `VEXCEL_ENV_FILE`). Claude is optional: without a key golden plans the
 shot offline (its call sheet says "planned offline"). With one, put the bare key on one line in
@@ -337,8 +344,8 @@ GOLDEN_OFFLINE=1
 VEXCEL_CACHE_DIR=C:\burvy\data\golden\cache                (LiDAR uses it too, under lidar\)
 GOLDEN_CLAUDE_DAILY_MAX=300                                (Claude calls a day, whole site)
 ANTHROPIC_ENV_FILE=C:\burvy\secrets\golden\anthropic.key   (optional, see 5; else GOLDEN_CLAUDE=off)
-COSTAR_KIT_DIR=C:\burvy\data\golden\costar                 (only if 1 says yes)
 ```
+(No `COSTAR_KIT_DIR`, see 1.)
 Per-IP limits are on by default (a minute: chat 6, search/scene/photo 30, other API calls
 300; see golden's README "Going live"). No CORS or proxy setting is needed: nginx connects from
 the same PC, so golden trusts its `CF-Connecting-IP`.
@@ -365,7 +372,19 @@ otherwise catch golden's map tiles). The trailing `/` on both paths swaps `/gold
 `/api/`. `proxy_read_timeout` is long because a chat answer can take ~40 s. Golden's rate
 limits read the visitor's address from `CF-Connecting-IP`, so keep that line. Then
 `nginx -t` (checks the file) and `nginx -s reload`, from nginx's folder.
-**Optional hardening (burvy decides):** the block above passes on whatever `CF-Connecting-IP` the
+8. **Optional, Cloudflare**: a rate-limiting rule for `burvy.dev/golden/api/*` (the free plan
+has one rule), on top of golden's own limits.
+9. **Upload the site**: `.\menu.ps1`, pick `burvy.dev site`, and copy the files it lists from
+`deploy\burvy-dev\dist\` to the server, including the `golden-app\` folder.
+10. **Smoke test**: open https://burvy.dev/golden. Golden's header must **not** say "Example
+data". Ask for a sunset spot in downtown LA: it returns spots, and the photo and 3D view load.
+https://burvy.dev/golden/api/health answers 200.
+11. Tell visitors what works: the brief should name downtown LA or Princeton.
+12. **Optional hardening (burvy decides), last:** do it only after 10 passes and after any
+per-visitor limit test from the server PC (task 069's prompt, check 7): afterwards a local test
+can no longer fake visitor IPs (every local call then counts as 127.0.0.1, one bucket), which is
+expected.
+The block above passes on whatever `CF-Connecting-IP` the
 caller sent. Someone who finds the server PC's own IP and calls nginx directly, skipping Cloudflare,
 can set that header and so choose their own rate-limit bucket. To close that gap, have nginx
 believe the header only from Cloudflare's addresses: in the `http { }` block add one
@@ -375,14 +394,6 @@ change the header line to `proxy_set_header CF-Connecting-IP $remote_addr;`. Run
 reload. (Allowing only Cloudflare on port 80 in the firewall would also work, but it would break the
 Let's Encrypt http-01 renewals that nginx answers on port 80; see `PORTS.md`.) Cloudflare's ranges
 rarely change, but check them once a year.
-8. **Optional, Cloudflare**: a rate-limiting rule for `burvy.dev/golden/api/*` (the free plan
-has one rule), on top of golden's own limits.
-9. **Upload the site**: `.\menu.ps1`, pick `burvy.dev site`, and copy the files it lists from
-`deploy\burvy-dev\dist\` to the server, including the `golden-app\` folder.
-10. **Smoke test**: open https://burvy.dev/golden. Golden's header must **not** say "Example
-data". Ask for a sunset spot in downtown LA: it returns spots, and the photo and 3D view load.
-https://burvy.dev/golden/api/health answers 200.
-11. Tell visitors what works: the brief should name downtown LA or Princeton.
 
 To take it down: stop `golden-server.exe`. The page then shows its saved example data and says
 so ("Example data (server not reachable)"); nothing else on the site is affected.
