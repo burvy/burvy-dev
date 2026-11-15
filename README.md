@@ -365,6 +365,16 @@ otherwise catch golden's map tiles). The trailing `/` on both paths swaps `/gold
 `/api/`. `proxy_read_timeout` is long because a chat answer can take ~40 s. Golden's rate
 limits read the visitor's address from `CF-Connecting-IP`, so keep that line. Then
 `nginx -t` (checks the file) and `nginx -s reload`, from nginx's folder.
+**Optional hardening (burvy decides):** the block above passes on whatever `CF-Connecting-IP` the
+caller sent. Someone who finds the server PC's own IP and calls nginx directly, skipping Cloudflare,
+can set that header and so choose their own rate-limit bucket. To close that gap, have nginx
+believe the header only from Cloudflare's addresses: in the `http { }` block add one
+`set_real_ip_from <range>;` line per range listed at https://www.cloudflare.com/ips-v4 and
+https://www.cloudflare.com/ips-v6, plus `real_ip_header CF-Connecting-IP;`. Then, in the golden block,
+change the header line to `proxy_set_header CF-Connecting-IP $remote_addr;`. Run `nginx -t` and
+reload. (Allowing only Cloudflare on port 80 in the firewall would also work, but it would break the
+Let's Encrypt http-01 renewals that nginx answers on port 80; see `PORTS.md`.) Cloudflare's ranges
+rarely change, but check them once a year.
 8. **Optional, Cloudflare**: a rate-limiting rule for `burvy.dev/golden/api/*` (the free plan
 has one rule), on top of golden's own limits.
 9. **Upload the site**: `.\menu.ps1`, pick `burvy.dev site`, and copy the files it lists from
