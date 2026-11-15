@@ -2,392 +2,258 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#145a94">
-<title>golden – spot search client</title>
-<!-- modules for the Vexcel 3D mesh view (js/meshview.js); the rest of the page uses the global three r128 -->
+<title>golden: find where to stand, for any shot</title>
+<!-- the 3D view reuses js/meshview.js, which imports these -->
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/examples/jsm/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/","3d-tiles-renderer":"https://cdn.jsdelivr.net/npm/3d-tiles-renderer@0.3.39/src/index.js"}}</script>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap">
 <style>
-/* The palette: sky blue chrome, sunset orange accents. Every colour on the page comes from here (task 032).
-   Text pairs meet WCAG AA: ink/mute on bg and panel, white on --sky-deep, --ink on --sun, --sun-ink on white. */
+/* Frontend v2 (task 057). Same identity as web/index.html (task 032): sky-blue chrome, sunset-orange light.
+   One bold element: the funnel, a band of light that narrows from pale sky into sunset orange as each "must" cuts points.
+   Everything else stays quiet. Goal colours are shared by the goal row, its map layer and its reason in the spot card. */
 :root{color-scheme:light;
---sky-deep:#145a94;--sky-deep2:#1f72b8;--sky:#3d9be0;--bg:#e6f2fc;--bg2:#f4f9fd;--panel:#ffffff;--field:#f3f9fe;--tint:#e3f1fb;
---ink:#0c2a43;--mute:#4a6680;--line:#c3dbee;--link:#145a94;
---sun:#f26b1d;--sun2:#f9a03f;--sun-ink:#b4410b;--on-sun:#0c2a43;
---night:#0f2a44;--night2:#0a1f33;--blk:#d4e6f4;
-box-sizing:border-box;padding-bottom:env(safe-area-inset-bottom,0px)}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,var(--bg) 0,var(--bg2) 900px) no-repeat,var(--bg2);color:var(--ink);font:15px/1.5 "Instrument Sans",system-ui,sans-serif}
-h1,h2,h3{font-family:"Bricolage Grotesque","Instrument Sans",system-ui,sans-serif;margin:0;line-height:1.1}
-header{display:flex;gap:14px;align-items:baseline;padding:calc(12px + env(safe-area-inset-top,0px)) 22px 12px;flex-wrap:wrap;background:linear-gradient(100deg,var(--sky-deep),var(--sky-deep2));color:#fff;box-shadow:inset 0 -3px 0 var(--sun)}
-h1{font-size:30px;letter-spacing:-.02em}
-#api{color:#dcecf9;font-size:13px}
-header summary{color:#dcecf9}header input{background:#fff}
-main{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:16px;padding:16px 22px 28px;align-items:start}
-@media(max-width:900px){main{grid-template-columns:1fr;padding:12px 14px 24px}header{padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px}}
-.col{display:flex;flex-direction:column;gap:16px;min-width:0}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0;overflow-wrap:anywhere;box-shadow:0 1px 2px rgba(20,90,148,.06)}
-label{font-weight:600;display:block;margin-bottom:6px}
-textarea,input,select,button{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:8px 10px}
-textarea{width:100%;min-height:72px;resize:vertical}
-.row{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
-button{cursor:pointer}button.go,#hero .row button.go{background:linear-gradient(180deg,var(--sun2),var(--sun));border-color:var(--sun);color:var(--on-sun);font-weight:700}
-button[disabled]{opacity:.6;cursor:wait}
-.tabs button[aria-selected=true]{background:var(--sky-deep);border-color:var(--sky-deep);color:#fff;font-weight:600}
-:focus-visible{outline:2px solid var(--sky-deep);outline-offset:2px}
-.spot{display:grid;grid-template-columns:48px 1fr;gap:10px;padding:10px;border-radius:8px;border:1px solid transparent;width:100%;text-align:left;background:none;color:inherit}
-@media(hover:hover){.spot:hover{background:var(--tint)}}.spot[aria-pressed=true]{border-color:var(--sun);background:var(--tint)}
-.sc{display:grid;place-items:center;height:44px;border-radius:8px;background:var(--tint);color:var(--sun-ink);font:700 18px "Bricolage Grotesque",sans-serif}
-.spot small{display:block;color:var(--mute)}
-#map{width:100%;height:340px;display:block;border-radius:8px;cursor:pointer;background:var(--tint);touch-action:pan-y}
-.mapwrap{position:relative}.mapctl{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
-.mapctl button{width:34px;height:34px;padding:0;font:700 18px/1 "Instrument Sans",sans-serif;background:rgba(255,255,255,.94);color:var(--sky-deep);border-color:var(--line);box-shadow:0 1px 4px rgba(12,42,67,.25)}
-.maphint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(12,42,67,.82);color:#fff;padding:10px 14px;border-radius:8px;font-size:15px;pointer-events:none;opacity:0;transition:opacity .25s;text-align:center}.maphint.on{opacity:1}
-.mute,.note{color:var(--mute);font-size:13px}.msg{color:var(--mute);padding:22px 6px;text-align:center}
-.err{color:var(--sun-ink)}
-.card{display:grid;gap:14px}.card h2{font-size:24px}
-.view{border-radius:8px;overflow:hidden;background:var(--night);min-height:200px}
-.view svg,.view canvas{width:100%;height:auto;display:block}
-#v3{height:min(62vh,520px);cursor:grab;touch-action:none;position:relative}#v3 canvas{height:100%!important}
-.view.big{position:fixed;inset:0;z-index:50;border-radius:0}.view.big #v3{height:100vh;height:100dvh}
-#bigbtn{position:absolute;right:8px;top:calc(8px + env(safe-area-inset-top,0px));z-index:51;background:rgba(12,42,67,.65);color:#fff;border-color:rgba(255,255,255,.3);font-size:13px;padding:6px 10px}
-.vwrap{position:relative}
-input[type=range]{width:100%;accent-color:var(--sun);padding:0}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:700px){.cols{grid-template-columns:1fr}}
-#photo{width:100%;border-radius:8px;display:block;min-height:140px;background:var(--blk)}
-.bld{padding:8px 0;border-top:1px solid var(--line)}.bld:first-child{border-top:0}
-pre{white-space:pre-wrap;margin:0;font:13px/1.5 "Instrument Sans",sans-serif}
-a{color:var(--link)}
-/* call sheet */
-#sheet h2{font-size:24px;margin:2px 0 6px}#sheet h4{font:600 12px "Instrument Sans",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:18px 0 8px}
-#sheet ol,#sheet ul{margin:0;padding:0;list-style:none}
-.tl li{display:grid;grid-template-columns:76px 1fr;gap:8px;padding:5px 0;border-top:1px solid var(--line)}.tl li:first-child{border-top:0}
-.tl time{font-variant-numeric:tabular-nums;color:var(--mute)}.tl li.shot{color:var(--sun-ink);font-weight:600}.tl li.shot time{color:var(--sun-ink)}
-.cs-spot,.who{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;display:grid;gap:6px;min-width:0}
-.cs-spot.primary{border-color:var(--sun)}
-.chip{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px;background:var(--tint);border:1px solid var(--line);vertical-align:1px}
-.chip.primary{background:var(--sun);border-color:var(--sun);color:var(--on-sun)}
-.cs-spot img{width:100%;border-radius:6px;display:block;aspect-ratio:3/2;object-fit:cover;background:var(--blk)}
-.cs-spot ul li,.caveats li{font-size:13px;color:var(--mute)}.cs-spot ul li::before{content:"· "}
-.acts{display:flex;gap:8px;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:4px;font:inherit;font-size:14px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:6px 10px;text-decoration:none;cursor:pointer}
-.btn.call{background:var(--sky-deep);border-color:var(--sky-deep);color:#fff;font-weight:600}
-.who blockquote{margin:0;padding:6px 10px;border-left:3px solid var(--sun);background:var(--tint);border-radius:0 6px 6px 0;font-size:14px}
-.steps{counter-reset:st}.steps li{counter-increment:st;display:grid;grid-template-columns:22px 78px 1fr;gap:8px;align-items:baseline;padding:4px 0;font-size:14px}
-.steps li::before{content:counter(st);display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--tint);border:1px solid var(--line);font-size:11px;font-weight:600}
-.caveats li::before{content:"! ";color:var(--sun-ink);font-weight:700}
-.pipe{list-style:none;padding:0;margin:10px auto;max-width:280px;text-align:left}.pipe li{padding:3px 0;color:var(--mute)}
-.pipe li::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--sun);margin-right:10px;opacity:.25;animation:pp 1.8s ease-in-out infinite}
-.pipe li:nth-child(2)::before{animation-delay:.3s}.pipe li:nth-child(3)::before{animation-delay:.6s}.pipe li:nth-child(4)::before{animation-delay:.9s}.pipe li:nth-child(5)::before{animation-delay:1.2s}.pipe li:nth-child(6)::before{animation-delay:1.5s}
-@keyframes pp{50%{opacity:1}}@media(prefers-reduced-motion:reduce){.pipe li::before{animation:none;opacity:.6}}
-#hero{position:fixed;inset:0;z-index:100;background:var(--night);color:#fff2dc;transition:opacity 1.1s ease}
-#hero.out{opacity:0;pointer-events:none}
-#golden-3d,#golden-3d canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-#hv{object-fit:cover;opacity:0;transition:opacity 1s}
-#hero .txt{position:absolute;left:0;right:0;bottom:0;padding:0 clamp(20px,6vw,80px) calc(clamp(28px,8vh,72px) + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,rgba(8,30,54,.9),rgba(8,30,54,.6) 55%,rgba(8,30,54,0));padding-top:160px;opacity:0;animation:hin 2.2s ease 2.2s forwards}
-@keyframes hin{to{opacity:1}}
-#hero h1{font-size:clamp(54px,11vw,140px);letter-spacing:-.04em;font-weight:700;color:#fff2dc}
-#hero p{margin:10px 0 18px;max-width:34ch;font-size:clamp(17px,2.2vw,24px);color:#f6d9b0}
-#hero .row button{background:rgba(255,242,220,.12);color:#fff2dc;border-color:rgba(255,242,220,.35)}
-@media(prefers-reduced-motion:reduce){#hero .txt{animation:none;opacity:1}}
-.hud{position:absolute;top:0;left:0;right:0;padding:calc(18px + env(safe-area-inset-top,0px)) clamp(20px,6vw,80px) 56px;background:linear-gradient(to bottom,rgba(8,30,54,.7),rgba(8,30,54,0));text-shadow:0 1px 14px rgba(6,24,44,.75)}
-#hplace{font:700 clamp(22px,3.4vw,38px) "Bricolage Grotesque",sans-serif;letter-spacing:-.01em}
-#htime{font-size:clamp(18px,2.4vw,26px)}#hwx,#hsun{font-size:clamp(14px,1.8vw,18px);color:#f6d9b0}
-#hero .small{font-size:13px;color:#e9c9a0;margin:12px 0 0}
-/* Phone and tablet (task 028): one column in the order you use it — brief, spots, a full-width map, the spot's view,
-   then the call sheet. 16px inputs (iOS zooms on smaller), 44px touch targets, and the inline 3D view lets vertical
-   swipes scroll the page (full screen still looks up and down). */
-@media(max-width:900px){
- .col{display:contents}
- #briefp{order:1}#listp{order:2}#mapp{order:3}#card{order:4}#sheet{order:5}
- #mapp{margin:0 -14px;border-radius:0;border-left:0;border-right:0;padding:0 0 10px}#mapp>.mute{padding:0 14px}
- #map{height:70vh;height:70svh;min-height:320px;border-radius:0}
- textarea,input,select{font-size:16px}
- button,.btn,select,input:not([type=range]){min-height:44px}.btn{padding:10px 14px}
- .tabs button{min-width:96px}
- .mapctl{right:10px;top:10px;gap:8px}.mapctl button{width:44px;height:44px;font-size:22px}
- .who .more a{display:inline-flex;align-items:center;min-height:44px}
- input[type=range]{height:44px}
- #v3,.view:not(.big) #v3 canvas{touch-action:pan-y!important}
- pre{max-height:50vh;overflow:auto}
- #hero .row button{min-height:48px;padding:10px 22px;font-size:17px}
+--sky-deep:#145a94;--sky-deep2:#1f72b8;--sky:#3d9be0;--bg:#e6f2fc;--bg2:#f4f9fd;--panel:#fff;--field:#f3f9fe;--tint:#e3f1fb;
+--ink:#0c2a43;--mute:#4a6680;--line:#c3dbee;--sun:#f26b1d;--sun2:#f9a03f;--sun-ink:#b4410b;--on-sun:#0c2a43;
+--g1:#1f72b8;--g2:#16807a;--g3:#f26b1d;--g4:#7d4fb0;--g5:#b07d00;--g6:#c2417a;
+--hdr:56px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg2);color:var(--ink);font:15px/1.5 "Instrument Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.num{font-family:"Bricolage Grotesque","Instrument Sans",system-ui,sans-serif;margin:0;line-height:1.15;font-weight:600}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--sky-deep);outline-offset:2px;border-radius:6px}
+.mute{color:var(--mute)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+header{height:var(--hdr);display:flex;align-items:center;gap:18px;padding:0 20px;padding-top:env(safe-area-inset-top,0px);
+ background:linear-gradient(100deg,var(--sky-deep),var(--sky-deep2));color:#fff;box-shadow:inset 0 -3px 0 var(--sun)}
+header h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+header .what{font-size:14px;color:#dcecf9}
+header .brief{margin-left:auto;font-size:14px;color:#fff;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+header .brief span{background:rgba(255,255,255,.14);border-radius:99px;padding:2px 10px}
+
+/* desktop: chat | stage | goals, each column scrolls on its own */
+main{display:grid;grid-template-columns:minmax(320px,370px) minmax(0,1fr) minmax(300px,340px);height:calc(100vh - var(--hdr));height:calc(100dvh - var(--hdr))}
+main>section,main>aside{min-height:0;overflow:auto}
+
+/* ---------- chat ---------- */
+#chat{display:flex;flex-direction:column;background:var(--panel);border-left:1px solid var(--line)}
+#chat h2{font-size:19px;padding:16px 18px 4px}
+#chat .lede{margin:0 18px 8px;color:var(--mute);font-size:14px}
+#log{flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:8px 16px 12px}
+.b{max-width:88%;padding:9px 12px;border-radius:14px;font-size:14.5px}
+.b.agent{align-self:flex-start;background:var(--tint);border:1px solid var(--line);border-bottom-left-radius:4px}
+.b.user{align-self:flex-end;background:var(--sky-deep);color:#fff;border-bottom-right-radius:4px}
+.steps{align-self:stretch;margin:2px 0;padding:0 0 0 14px;border-left:2px solid var(--sun2);list-style:none;font-size:13px;color:var(--mute)}
+.steps li{padding:2px 0}
+.steps b{color:var(--ink);font-weight:600}
+#known{display:flex;flex-wrap:wrap;gap:5px;padding:0 16px}
+#known:empty{display:none}
+.chip{border:1px solid var(--line);border-radius:99px;padding:1px 9px;font-size:13px;background:var(--bg2)}
+.chip.pick{border-style:dashed}
+#choices{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 0}
+#choices:empty{display:none}
+#choices button{border-radius:99px;padding:7px 13px;background:var(--panel);border:1px solid var(--sun);color:var(--sun-ink);font-weight:600;min-height:40px}
+#choices button.def{background:linear-gradient(180deg,var(--sun2),var(--sun));color:var(--on-sun)}
+#say{display:flex;gap:8px;padding:12px 16px 16px;border-top:1px solid var(--line);margin-top:10px}
+#say textarea{flex:1;resize:none;height:46px;border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:var(--field);font-size:16px}
+#say button{border:0;border-radius:12px;padding:0 16px;font-weight:700;background:linear-gradient(180deg,var(--sun2),var(--sun));color:var(--on-sun)}
+#gonow{margin:6px 16px 0;align-self:flex-start;border:0;background:none;color:var(--sky-deep);font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:6px 0}
+.dots i{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:var(--mute);animation:bl 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes bl{50%{opacity:.25}}
+
+/* ---------- stage: funnel, map, spot ---------- */
+#stage{padding:16px 20px 28px;display:flex;flex-direction:column;gap:14px}
+#stage>*{flex-shrink:0}
+#funnel{position:relative;padding:4px 0 0}
+#funnel svg{display:block;width:100%;height:84px}
+.fsteps{display:grid;grid-template-columns:repeat(var(--n,4),1fr);margin-top:-84px;height:84px;position:relative}
+.fs{display:flex;flex-direction:column;justify-content:center;padding:0 10px;min-width:0}
+.fs .num{font-size:28px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.fs.last .num{color:var(--sun-ink)}
+.fcap{display:grid;grid-template-columns:repeat(var(--n,4),1fr);margin-top:6px}
+.fcap div{padding:0 10px;font-size:13px;color:var(--mute);line-height:1.3;min-width:0}
+.fcap div b{display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--c);margin-right:5px;vertical-align:0}
+.fcap .check{border:0;padding:0;margin-top:3px;background:none;color:var(--sun-ink);font-weight:600;text-decoration:underline;text-underline-offset:3px;font-size:13px}
+#funnel.flash .num{animation:fl .5s ease}
+@keyframes fl{from{opacity:.35;transform:translateY(3px)}}
+
+.mapwrap{position:relative;border-radius:14px;overflow:hidden;background:#dbe9f4;border:1px solid var(--line)}
+#map{display:block;width:100%;height:clamp(320px,52vh,560px);touch-action:pan-y;cursor:grab}
+#layers{position:absolute;left:12px;top:12px;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 76px)}
+#layers button{display:flex;align-items:center;gap:6px;border:0;border-radius:99px;padding:6px 12px 6px 9px;font-size:13px;font-weight:600;
+ background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(12,42,67,.25);min-height:34px}
+#layers button i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+#layers button[aria-pressed=true]{background:var(--ink);color:#fff}
+#legend{position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.94);border-radius:10px;padding:7px 10px;font-size:12.5px;line-height:1.35;box-shadow:0 1px 3px rgba(12,42,67,.2);max-width:min(440px,calc(100% - 80px));display:flex;flex-direction:column;gap:5px}
+#legend .lrow{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+#legend .ramp{display:inline-block;height:9px;width:64px;border-radius:4px;flex:none}
+#legend .pins{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+#legend .pin{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--sun);font:800 10.5px "Bricolage Grotesque",sans-serif;margin-right:1px}
+#legend .pins button{margin-left:6px;border:1px solid var(--sun);background:#fff;color:var(--sun-ink);border-radius:99px;padding:3px 10px;font-weight:600;font-size:12.5px;min-height:30px}
+.mapctl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px}
+.mapctl button{width:40px;height:40px;border:0;border-radius:10px;background:rgba(255,255,255,.94);box-shadow:0 1px 3px rgba(12,42,67,.25);font:700 20px/1 "Instrument Sans",sans-serif;color:var(--ink)}
+.mapctl svg{width:18px;height:18px;vertical-align:middle}
+#searcharea{position:absolute;left:50%;top:56px;transform:translateX(-50%);border:0;border-radius:99px;padding:9px 18px;font-weight:700;min-height:42px;
+ background:linear-gradient(180deg,var(--sun2),var(--sun));color:var(--on-sun);box-shadow:0 2px 10px rgba(12,42,67,.35)}
+#searcharea[hidden],#busy[hidden],#toast[hidden]{display:none}
+#busy{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(12,42,67,.88);color:#fff;border-radius:12px;padding:12px 18px;font-weight:600;max-width:80%}
+#toast{border-radius:10px;padding:10px 12px;background:var(--tint);border:1px solid var(--line);font-size:14px}
+#toast.err{background:#fff1e8;border-color:#f6cfb3;color:var(--sun-ink)}
+#classic{flex:none;font-size:12.5px;color:#dcecf9;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+#datamode:empty{display:none}
+#datamode{font-size:12px;background:rgba(255,255,255,.18);border-radius:99px;padding:2px 10px;color:#fff}
+.attrib{position:absolute;right:8px;bottom:6px;font-size:11px;color:#fff;text-shadow:0 0 3px #000}
+.empty[hidden]{display:none}
+.empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;background:linear-gradient(180deg,rgba(230,242,252,.55),rgba(230,242,252,.85))}
+.empty p{max-width:34ch;font-size:16px;margin:0}
+
+/* the spot card */
+#spot{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+#spot[hidden]{display:none}
+.sp-head{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.sp-rank{display:flex;gap:4px}
+.sp-rank button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--bg2);font:700 15px "Bricolage Grotesque",sans-serif}
+.sp-rank button[aria-pressed=true]{background:var(--sun);border-color:var(--sun);color:var(--on-sun)}
+.sp-rank{flex-wrap:wrap;flex-shrink:0;max-width:206px}.sp-rank button.new{border-style:dashed;border-color:var(--sun)}
+.sp-title{min-width:0}
+.sp-title h2{font-size:20px}
+.sp-title p{margin:0;color:var(--mute);font-size:14px}
+.sp-score{margin-left:auto;text-align:right}
+.sp-score .num{font-size:30px;font-weight:800;color:var(--sun-ink);line-height:1}
+.sp-score small{color:var(--mute);font-size:12px}
+.sp-body{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+.sp-why{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.reasons{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.reasons li{display:grid;grid-template-columns:1fr 46px;gap:2px 10px;align-items:center}
+.reasons .gname{font-weight:600;font-size:14px;display:flex;align-items:center;gap:7px}
+.reasons .gname i{width:10px;height:10px;border-radius:2px;background:var(--c);flex:none}
+.reasons .gname em{font-style:normal;font-weight:500;color:var(--mute);font-size:12.5px}
+.reasons .bar{grid-column:1;height:5px;border-radius:3px;background:var(--tint);overflow:hidden}
+.reasons .bar b{display:block;height:100%;background:var(--c)}
+.reasons .v{grid-row:1/3;grid-column:2;text-align:right;font:700 16px "Bricolage Grotesque",sans-serif;font-variant-numeric:tabular-nums}
+.reasons .w{grid-column:1/3;font-size:13px;color:var(--mute)}
+.ai{border-radius:10px;background:linear-gradient(180deg,#fff6ee,#fff);border:1px solid #f6cfb3;padding:10px 12px}
+.ai h3{font-size:14px;display:flex;align-items:center;gap:8px}
+.ai p{margin:4px 0 0;font-size:14px}
+.verdict{font:600 12px "Instrument Sans",sans-serif;border-radius:99px;padding:1px 8px;background:var(--sun);color:var(--on-sun)}
+.verdict.caution,.verdict.moved_down{background:#ffd8a8}.verdict.ruled_out{background:#e8d6d6;color:#6b2020}.verdict.none{background:var(--tint);color:var(--mute)}
+.ai button{margin-top:8px;border:1px solid var(--sun);background:#fff;color:var(--sun-ink);border-radius:8px;padding:6px 10px;font-weight:600}
+.sp-media{border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.sp-tabs{display:flex;gap:4px;padding:10px 12px 0}
+.sp-tabs button{border:1px solid var(--line);background:var(--bg2);border-radius:8px;padding:5px 12px;font-weight:600;font-size:14px;min-height:36px}
+.sp-tabs button[aria-selected=true]{background:var(--sky-deep);border-color:var(--sky-deep);color:#fff}
+.view{margin:10px 12px;border-radius:10px;overflow:hidden;background:linear-gradient(180deg,#a9cdea,#f7c99a);aspect-ratio:4/3;position:relative}
+.view img{width:100%;height:100%;object-fit:cover;display:block}
+.view .ph{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:14px;color:var(--ink);font-size:14px}
+.view canvas{display:block}
+.calls{list-style:none;margin:0 12px 12px;padding:0;font-size:14px}
+.calls li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+.calls a{color:var(--sky-deep);font-weight:600;white-space:nowrap}
+
+/* ---------- goals ---------- */
+#goals{background:var(--panel);border-right:1px solid var(--line);padding:16px 16px 28px;position:relative}
+#goals h2{font-size:19px}
+#goals .lede{margin:2px 0 14px;color:var(--mute);font-size:14px}
+.group{margin:0 0 16px}
+.group h3{font-size:15px;margin:0 0 8px;display:flex;align-items:baseline;gap:8px}
+.group h3 small{font:500 12.5px "Instrument Sans",sans-serif;color:var(--mute)}
+.glist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.goal{border:1px solid var(--line);border-left:4px solid var(--c);border-radius:10px;padding:10px 10px 10px 12px;background:var(--panel)}
+.goal.must{background:linear-gradient(90deg,color-mix(in srgb,var(--c) 7%,#fff),#fff 60%)}
+.ghead{display:flex;align-items:center;gap:6px}
+.ghead h4{font:600 15px "Bricolage Grotesque",sans-serif;margin:0;flex:1;min-width:0}
+.ib{width:34px;height:34px;border-radius:8px;border:1px solid transparent;background:none;display:grid;place-items:center;color:var(--mute)}
+.ib:hover{background:var(--tint)}
+.ib[aria-pressed=true]{background:var(--ink);color:#fff}
+.ib svg{width:18px;height:18px}
+.goal p{margin:2px 0 8px;font-size:14px;color:var(--mute)}
+.ctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sw{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;cursor:pointer;min-height:34px}
+.sw input{appearance:none;width:34px;height:20px;border-radius:99px;background:var(--line);position:relative;margin:0;cursor:pointer;transition:background .15s}
+.sw input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.sw input:checked{background:var(--c)}.sw input:checked::after{transform:translateX(14px)}
+.wt{display:flex;align-items:center;gap:8px;flex:1;min-width:150px}
+.wt input{flex:1;accent-color:var(--c);min-height:30px}
+.wt output{font:700 14px "Bricolage Grotesque",sans-serif;width:30px;text-align:right;font-variant-numeric:tabular-nums}
+.gmeta{font-size:12.5px;color:var(--mute);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
+.gmeta .new{color:var(--sun-ink);font-weight:600}
+.gmeta button{border:0;background:none;padding:0;color:var(--sky-deep);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.goal details{margin-top:6px;font-size:12.5px}
+.goal summary{cursor:pointer;color:var(--sky-deep);font-weight:600;width:max-content}
+.formula{display:block;width:100%;margin:6px 0 0;padding:8px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;font:12.5px/1.45 ui-monospace,Consolas,monospace;min-height:120px;max-height:260px;resize:vertical}
+.frow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+.frow button{border:1px solid var(--sun);background:#fff;color:var(--sun-ink);border-radius:8px;padding:6px 10px;font-weight:600;min-height:36px}
+.ferr{color:var(--sun-ink);font-size:12.5px}
+.goal.gone{border-left-color:var(--line);opacity:.75}.goal.gone h4{text-decoration:line-through}
+.reset{border:0;background:none;color:var(--sky-deep);font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:6px 0;margin-bottom:8px}
+button[disabled]{opacity:.55;cursor:default}
+.gempty{border:1px dashed var(--line);border-radius:10px;padding:14px;color:var(--mute);font-size:14px}
+#addgoal{width:100%;border:1px dashed var(--sky);background:var(--bg2);border-radius:10px;padding:11px;font-weight:600;color:var(--sky-deep);min-height:44px}
+#newbrief{margin-left:auto;border:0;background:none;color:var(--sky-deep);font-weight:600;font-size:13.5px;text-decoration:underline;text-underline-offset:3px;padding:4px 0;min-height:32px}
+#chat .top{display:flex;align-items:baseline;padding:16px 18px 4px}#chat .top h2{padding:0}
+
+
+/* ---------- phone and tablet: one column, in the order you use it ---------- */
+@media (max-width:980px){
+ :root{--hdr:auto}
+ header{height:auto;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;flex-wrap:wrap;gap:4px 12px}
+ header .brief{margin-left:0;justify-content:flex-start;width:100%}
+ main{display:flex;flex-direction:column;height:auto}
+ main>section,main>aside{overflow:visible}
+ #chat{border-left:0;border-bottom:1px solid var(--line);order:-1} /* desktop: numbers left, chat right; phone keeps chat first */
+ #log{max-height:46vh;max-height:46svh}
+ #stage{padding:14px 12px 8px}
+ #goals{border-right:0;border-top:1px solid var(--line);padding:16px 12px 28px;order:1}
+ .fs .num{font-size:21px}.fs{padding:0 6px}.fcap div{padding:0 6px;font-size:12px}
+ #map{height:62vh;height:62svh}
+ #layers{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:calc(100% - 70px)}#layers button{flex:none}
+ .wide{display:none}
+ #legend{max-width:calc(100% - 24px)}
+ .sp-body{grid-template-columns:1fr}.sp-media{border-left:0;border-top:1px solid var(--line)}
+ .sp-head{flex-wrap:wrap}.sp-rank{order:3;width:100%}.sp-rank button{width:44px;height:44px}
+ .ib{width:44px;height:44px}
 }
-</style></head><body>
-<section id="hero" aria-label="Live skyline intro">
-<div id="golden-3d" aria-hidden="true" style="position:absolute;inset:0"></div>
-<div class="hud" aria-live="off"><div id="hplace">Locating your city…</div><div id="htime"></div><div id="hwx"></div><div id="hsun"></div></div>
-<div class="txt"><h1>golden</h1><p>Tell us the shot. We’ll find where to stand.</p><div class="row"><button class="go" id="hgo">Find a spot</button></div><p class="small" id="hnote">Loading live city geometry…</p></div>
-</section>
-<header><h1>golden</h1><span id="api"></span>
-<details id="apiset" style="margin-left:auto"><summary>API settings</summary><div class="row"><input id="base" value="http://localhost:8787" aria-label="API base URL" size="26"><button id="save">Use</button></div></details></header>
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head>
+<body>
+<header>
+  <h1>golden</h1><span class="what">Find where to stand, for any shot</span><span id="datamode"></span>
+  <div class="brief" id="hbrief" aria-label="The brief so far"></div>
+  <a id="classic" href="classic/">Classic page</a>
+</header>
 <main>
-<div class="col">
-<section class="panel" id="briefp"><label for="brief">Shot brief</label><p class="note" style="margin:-2px 0 6px">Say the shot, the place and the day, e.g. “sunrise from the street in Downtown LA, late June”.</p>
-<textarea id="brief">Sun setting between two buildings, from a rooftop in Princeton, NJ, tonight</textarea>
-<div class="row"><input type="date" id="date" aria-label="Date (optional: the agent reads it from the brief)" title="Optional. Leave it and the agent reads the day from the brief."><button class="go" id="find">Find spots</button></div></section>
-<section class="panel" id="sheet" hidden aria-live="polite"><div id="cs"></div><pre id="sheetText"></pre><div class="row"><button id="copy">Copy as text</button></div></section>
-<section class="panel" id="listp" aria-live="polite"><div id="list"><div class="msg">Describe a shot to see ranked spots.</div></div></section>
-</div>
-<div class="col">
-<section class="panel" id="mapp"><div class="mapwrap"><canvas id="map" role="img" aria-label="Map of spots"></canvas>
-<div class="mapctl"><button data-z="1.6" aria-label="Zoom in">+</button><button data-z="0.625" aria-label="Zoom out">−</button><button id="mfit" aria-label="Fit the search area" title="Fit the search area">⤢</button></div>
-<div class="maphint" id="mhint" aria-hidden="true">Use two fingers to move the map</div></div>
-<div class="mute" style="margin-top:6px">Dot size and colour show the score. The line points at the sun when it leaves the view.</div></section>
-<section class="panel card" id="card"><div class="msg">Pick a spot to see the view from there.</div></section>
-</div></main>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-const $=s=>document.querySelector(s),rad=Math.PI/180;let TZ='America/Los_Angeles';
-/* BB: the map's box. AREA: where the server searched (from the call sheet); the map fits it. */
-let BB={n:34.066,s:34.034,w:-118.272,e:-118.224},AREA=null,DATE_SET=false;
-const clk=t=>new Date(t).toLocaleTimeString('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit'});
-if(location.protocol.startsWith('http'))$('#base').value=location.origin; // served by the golden server: talk to it
-// ?api=/golden: the API sits under that path on this origin (burvy.dev proxies /golden/api to the golden server). Same-origin paths only.
-{const a=new URLSearchParams(location.search).get('api');if(location.protocol.startsWith('http')&&a&&/^\/(?!\/)/.test(a))$('#base').value=location.origin+a.replace(/\/$/,'')}
-// the API box is for developers: hidden when served over http unless the URL has ?settings
-if(location.protocol.startsWith('http')&&!new URLSearchParams(location.search).has('settings'))$('#apiset').hidden=true;
-const PHONE=matchMedia('(max-width:900px)');
-const CFG={base:$('#base').value.replace(/\/$/,'')},LIVE={};
-/* ---------- API layer: real server first, per-endpoint fallback to MOCK ---------- */
-async function call(ep,params,body){
- try{const j=await REAL[ep](params||{},body);LIVE[ep]=1;showApi();return j}
- catch(e){console.warn('golden: '+ep+' fell back to sample data:',e.message);LIVE[ep]=0;showApi();return MOCK[ep](params||{},body)}}
-/* One request to the golden server. Heights for a new area are downloaded on first use, so allow a long wait. */
-async function raw(ep,params,body,ms=90e3){const qs=params?'?'+new URLSearchParams(params):'',c=new AbortController(),to=setTimeout(()=>c.abort(),ms);
- try{const r=await fetch(CFG.base+ep+qs,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:c.signal});
-  if(!r.ok){let m='HTTP '+r.status;try{m=(await r.json()).error||m}catch(_){}throw new Error(m)}return r}finally{clearTimeout(to)}}
-const getJ=(ep,p,ms)=>raw(ep,p,null,ms).then(r=>r.json());
-/* ---------- adapters: contract shapes (docs/contracts.md) -> the shapes this page draws ---------- */
-const REAL={
- async '/api/search'(_,b){const req={text:b.brief};if(b.date)req.date=b.date;
-  const sh=await raw('/api/agent',null,req,300e3).then(r=>r.json()),br=sh.brief;
-  TZ=br.tz;AREA=br.area;$('#date').value=br.date;
-  return{spots:sh.spots.map(spotUI),sun_path:[],call_sheet_text:sheetText(sh),call_sheet:sh}},
- async '/api/sun'(p){return(await getJ('/api/sun',{lat:p.lat,lon:p.lon,date:p.date,tz:TZ,step_min:5})).points},
- async '/api/spot/horizon'(p){const r=await getJ('/api/horizon',{lat:p.lat,lon:p.lon,above_m:1.7,step_deg:1});return r.points.map(q=>({az_deg:q.az_deg,elev_deg:q.elev_deg}))},
- async '/api/scene'(p){const m=await getJ('/api/scene',{lat:p.lat,lon:p.lon,radius_m:500,detail:'phone'}),buf=new DataView(await (await raw(m.data_url)).arrayBuffer());
-  // ring 1 (4 m cells, ~1 km across) shows the towers that matter; ring 0 alone is only ~250 m
-  const ring=m.rings.find(r=>r.cell_m>=2)||m.rings[m.rings.length-1],n=ring.width,hs=new Array(n*n);
-  for(let i=0;i<n*n;i++){const v=buf.getUint16(ring.byte_offset+i*2,true);hs[i]=v===m.nodata?0:v/10}
-  // the eye must clear the coarse cells it stands in (each keeps the tallest point under it), or walls fill the view
-  let near=0;for(let r=n/2-2;r<n/2+2;r++)for(let k=n/2-2;k<n/2+2;k++)near=Math.max(near,hs[r*n+k]);
-  return{n,cell_m:ring.cell_m,heights:hs,eye:p.eye_m?Math.max(+p.eye_m-m.base_m,near+2):null,attribution:m.attribution}},
- async '/api/buildings'(p){const r=await getJ('/api/buildings',{lat:p.lat,lon:p.lon,radius_m:p.radius_m||150});
-  return r.buildings.map(b=>{const c=b.contacts[0];return{name:b.name||b.address||'Unnamed building',height_m:b.height_m,floors:b.floors??'?',
-   contact:c?[c.role,c.name||c.company,c.phone||c.email].filter(Boolean).join(' · '):'No contact listed',matterport_id:b.matterport[0]?.id||null}})}};
-/* A call-sheet spot as a list row. */
-/* The server's why/summary lines write 24-hour times (16:36); show them like the rest of the page (4:36 PM). */
-const t12=v=>String(v??'').replace(/(?<![\d:+-])([01]?\d|2[0-3]):([0-5]\d)(?![\d:]|\s*[AP]M)/g,(_,h,m)=>`${+h%12||12}:${m} ${+h<12?'AM':'PM'}`);
-function spotUI(x){const s=x.spot;return{id:`#${s.rank} ${s.standing==='roof'?'Roof':'Street'} · ${x.role}`,lat:s.lat,lon:s.lon,height_m:Math.round(s.ground_m),eye_m:s.eye_m,standing:s.standing,
- score:s.score,sun_visible_until:s.sun.hidden_at||s.sun.flat_sunset,why:t12(s.why.join('. ')),arrive_by:x.arrive_by}}
-function sheetText(sh){const L=[sh.title,'',t12(sh.summary),'','Timeline'];
- for(const t of sh.timeline)L.push(`  ${clk(t.t)}  ${t.what}`);
- L.push('','Spots');for(const x of sh.spots)L.push(`  ${x.role==='primary'?'Primary':'Backup'}: ${x.spot.lat.toFixed(5)}, ${x.spot.lon.toFixed(5)} (${x.spot.standing}). Arrive by ${clk(x.arrive_by)}.`,...x.notes.map(n=>'    '+t12(n)));
- if(sh.access.length){L.push('','Access');for(const a of sh.access)L.push(`  ${a.building_name||a.building_id}: ${a.contact?[a.contact.name,a.contact.phone||a.contact.email].filter(Boolean).join(', '):'no CoStar contact'}`,`    Ask: ${a.ask}`)}
- if(sh.caveats.length){L.push('','Caveats',...sh.caveats.map(c=>'  - '+t12(c)))}
- if(sh.steps&&sh.steps.length){L.push('','What the agent did',...sh.steps.map(s=>`  ${s.tool}: ${t12(s.summary)}`))}
- L.push('',`Written by: ${sh.model}`);return L.join('\n')}
-function showApi(){const m=Object.keys(LIVE).filter(k=>!LIVE[k]);$('#api').textContent=!Object.keys(LIVE).length?'':m.length?'Sample data for '+m.join(', '):'Connected to server'}
-/* ---------- helpers on contract shapes ---------- */
-function interp(path,ms){for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i],ta=Date.parse(a.t),tb=Date.parse(b.t);if(ms<=tb){const f=Math.max(0,(ms-ta)/(tb-ta));return{az:a.az_deg+(b.az_deg-a.az_deg)*f,el:a.elev_deg+(b.elev_deg-a.elev_deg)*f}}}const l=path[path.length-1];return{az:l.az_deg,el:l.elev_deg}}
-function hzf(hz){const a=hz.slice().sort((x,y)=>x.az_deg-y.az_deg);return az=>{az=(az%360+360)%360;const j=a.findIndex(p=>p.az_deg>az),hi=j<0?a[0]:a[j],lo=j<=0?a[a.length-1]:a[j-1];let la=lo.az_deg,ha=hi.az_deg;if(la>az)la-=360;if(ha<az)ha+=360;return lo.elev_deg+(hi.elev_deg-lo.elev_deg)*(ha===la?0:(az-la)/(ha-la))}}
-function blockTime(path,hf,rise){const pk=path.reduce((m,p)=>p.elev_deg>m.elev_deg?p:m),pm=Date.parse(pk.t),t0=Date.parse(path[0].t),t1=Date.parse(path[path.length-1].t);
- for(let ms=rise?t0:pm;ms<=(rise?pm:t1);ms+=6e4){const p=interp(path,ms);if(rise?p.el>=hf(p.az):p.el<hf(p.az))return{ms,...p}}return null}
-const mx=lon=>(lon+180)/360,my=lat=>(1-Math.log(Math.tan(Math.PI/4+lat*rad/2))/Math.PI)/2;
-/* VIEW: the user's pan/zoom on top of BB (k = zoom, dx/dy = centre offset in Mercator units). MB: the box drawn. */
-const VIEW={k:1,dx:0,dy:0};let MB=null;
-function viewBox(){const x0=mx(BB.w),x1=mx(BB.e),y0=my(BB.n),y1=my(BB.s),cx=(x0+x1)/2+VIEW.dx,cy=(y0+y1)/2+VIEW.dy,hw=(x1-x0)/2/VIEW.k,hh=(y1-y0)/2/VIEW.k;return MB={x0:cx-hw,x1:cx+hw,y0:cy-hh,y1:cy+hh}}
-const px=(lat,lon,W,H)=>{const b=MB||viewBox();return[(mx(lon)-b.x0)/(b.x1-b.x0)*W,(my(lat)-b.y0)/(b.y1-b.y0)*H]};
-/* Fit BB to the searched area at the canvas's aspect ratio. */
-function fitBB(W,H){if(!AREA||!W||!H)return;const dLat=AREA.radius_m*1.25/111320,dLon=dLat*W/H/Math.cos(AREA.lat*rad);BB={n:AREA.lat+dLat,s:AREA.lat-dLat,w:AREA.lon-dLon,e:AREA.lon+dLon}}
-/* ---------- state ---------- */
-const S={spots:[],path:[],sheet:'',cs:null,sel:null,d:{},tab:'h',t:0,tok:0,rise:false,busy:false,err:''};
-/* ---------- search ---------- */
-async function search(ev){const brief=$('#brief').value.trim();if(!brief)return;S.busy=true;S.err='';S.sel=null;$('#find').disabled=true;
- const t0=Date.now(),say=()=>{$('#list').innerHTML=`<div class="msg"><b>The agent is working</b> · ${Math.round((Date.now()-t0)/1e3)} s<ol class="pipe">${PIPE.map(p=>`<li>${p}</li>`).join('')}</ol><small>Usually 10–20 s. A new area downloads its height map first, which can take a minute.</small></div>`};$('#sheet').hidden=true;say();const tick=setInterval(say,1000);
- S.rise=/sunrise|rising|dawn/i.test(brief);VIEW.k=1;VIEW.dx=VIEW.dy=0;
- try{const r=await call('/api/search',null,{brief,date:DATE_SET?$('#date').value:null,area:BB});S.spots=r.spots.slice().sort((a,b)=>b.score-a.score);S.path=r.sun_path;S.sheet=r.call_sheet_text||'';S.cs=r.call_sheet||null}
- catch(e){S.spots=[];S.cs=null;S.sheet='';S.err='Search failed. Check the server and try again.'}
- clearInterval(tick);S.busy=false;$('#find').disabled=false;renderSheet();renderList();drawMap();if(S.spots.length){select(S.spots[0]);if(PHONE.matches&&ev)$('#mapp').scrollIntoView({behavior:'smooth',block:'start'})}}
-function renderList(){const L=$('#list');if(S.err){L.innerHTML=`<div class="msg err">${S.err}</div>`;return}
- if(!S.spots.length){L.innerHTML='<div class="msg">No spots matched. Try a wider brief or another date.</div>';return}
- L.innerHTML=S.spots.map((s,i)=>`<button class="spot" data-i="${i}" aria-pressed="${S.sel&&S.sel.id===s.id}"><span class="sc">${Math.round(s.score*100)}</span><span><b>${s.id}</b> · ${s.height_m} m<small>Sun gone at ${clk(s.sun_visible_until)}</small><small>${s.why}</small></span></button>`).join('');
- L.querySelectorAll('.spot').forEach(b=>b.onclick=()=>{select(S.spots[+b.dataset.i]);if(PHONE.matches)$('#card').scrollIntoView({behavior:'smooth',block:'start'})})}
-/* ---------- call sheet: the agent's answer, rendered (docs/contracts.md#agentrequest-and-callsheet) ---------- */
-const PIPE=['Read the brief','Search spots on the height map','Work out sun times','Pull aerial photos','Find the buildings and who to call','Write the call sheet'];
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const day=d=>new Date(d+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',day:'numeric',month:'short',year:'numeric'});
-const telHref=p=>'tel:'+String(p).replace(/[^\d+]/g,'');
-const STEP={read:'Read',plan:'Plan',search:'Search',sun:'Sun',photo:'Photo',buildings:'Buildings',write:'Write',geocode:'Place'};
-function renderSheet(){const sh=S.cs;$('#sheet').hidden=!sh&&!S.sheet;$('#sheetText').hidden=!!sh;$('#sheetText').textContent=sh?'':S.sheet;
- if(!sh){$('#cs').innerHTML=S.sheet?'<h3>Call sheet</h3>':'';return}
- const rise=sh.brief.event==='sunrise',H=(t,x)=>`<h4>${t}</h4>${x}`;
- let h=`<p class="mute" style="margin:0">Call sheet · ${esc(day(sh.brief.date))} · ${sh.model==='mock'?'planned offline':'written by '+esc(sh.model)}</p><h2>${esc(sh.title)}</h2><p style="margin:0">${esc(t12(sh.summary))}</p>`;
- h+=H('Timeline',`<ol class="tl">${sh.timeline.map(t=>`<li class="${/the shot/i.test(t.what)?'shot':''}"><time datetime="${esc(t.t)}">${esc(clk(t.t))}</time><span>${esc(t.what)}</span></li>`).join('')}</ol>`);
- h+=H('Spots',sh.spots.map((x,i)=>{const s=x.spot,sun=s.sun,when=sun.hidden_at?`Sun ${rise?'clears the skyline':'meets the skyline'} at <b>${esc(clk(sun.hidden_at))}</b>`:`Sun in view ${rise?'from':'until'} <b>${esc(clk(sun.flat_sunset))}</b>`;
-  return `<div class="cs-spot ${esc(x.role)}"><div><span class="chip ${esc(x.role)}">${x.role==='primary'?'Primary':'Backup'}</span> <b>${s.standing==='roof'?'Rooftop':'Street level'}</b> · arrive by <b>${esc(clk(x.arrive_by))}</b></div>
-  <div>${when} · ${sun.golden_min_visible} min of golden hour in view</div>${x.photo_url?`<img loading="lazy" alt="Aerial photo of the ${esc(x.role)} spot" src="${esc(CFG.base+x.photo_url)}" onerror="this.remove()">`:''}
-  ${x.notes.length?`<ul>${x.notes.map(n=>`<li>${esc(t12(n))}</li>`).join('')}</ul>`:''}<div class="acts"><button class="btn" data-go="${i}">Show on map and view</button><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&amp;destination=${+s.lat},${+s.lon}">Directions</a></div></div>`}).join(''));
- h+=H('Who to call',sh.access.length?sh.access.map((a,i)=>{const c=a.contact,name=a.building_name||a.building_id,subj=`Roof access request: ${name}`;
-  return `<div class="who" data-b="${esc(a.building_id)}"><div><b>${esc(name)}</b>${c?` <span class="chip">${esc(c.role)}</span>`:''}</div>
-  ${c?`<div>${esc([c.name,c.company].filter(Boolean).join(' · ')||'Contact on file')}</div>`:'<div class="mute">CoStar has no contact for this building.</div>'}
-  <blockquote>${esc(a.ask)}</blockquote><div class="acts">${c&&c.phone?`<a class="btn call" href="${esc(telHref(c.phone))}">Call ${esc(c.phone)}</a>`:''}${c&&c.email?`<a class="btn" href="mailto:${esc(c.email)}?subject=${encodeURIComponent(subj)}&amp;body=${encodeURIComponent(a.ask)}">Email</a>`:''}<button class="btn" data-ask="${i}">Copy request</button></div><div class="more"></div></div>`}).join('')
-  :`<p class="mute" style="margin:0">${sh.spots.some(x=>x.spot.standing==='roof')?'No CoStar contacts for these roofs (CoStar\'s data covers Los Angeles and Houston). See the caveats.':'Street-level spots: no access needed.'}</p>`);
- if(sh.steps&&sh.steps.length)h+=H('What the agent did',`<ol class="steps">${sh.steps.map(s=>`<li><b>${esc(STEP[s.tool]||s.tool)}</b><span>${esc(t12(s.summary))}</span></li>`).join('')}</ol>`);
- if(sh.caveats.length)h+=H('Caveats',`<ul class="caveats">${sh.caveats.map(c=>`<li>${esc(t12(c))}</li>`).join('')}</ul>`);
- const cs=$('#cs');cs.innerHTML=h;
- cs.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{const s=sh.spots[+b.dataset.go].spot,sp=S.spots.find(x=>x.lat===s.lat&&x.lon===s.lon);if(sp){select(sp);$('#card').scrollIntoView({behavior:'smooth',block:'start'})}});
- cs.querySelectorAll('[data-ask]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(sh.access[+b.dataset.ask].ask);b.textContent='Copied'}catch(_){b.textContent='Select the text to copy'}setTimeout(()=>b.textContent='Copy request',1500)});
- cs.querySelectorAll('.who').forEach(moreContacts)}
-/* The access contact is CoStar's best one; the building may list more (with phones) and a Matterport tour of the inside. */
-async function moreContacts(el){const id=el.dataset.b;if(!id||!S.cs)return;const shown=(S.cs.access.find(a=>a.building_id===id)||{}).contact;
- try{const b=await getJ('/api/buildings/'+encodeURIComponent(id),null,15e3);if(!el.isConnected)return;
-  const same=c=>shown&&c.role===shown.role&&c.name===shown.name&&c.company===shown.company,more=b.contacts.filter(c=>!same(c)&&(c.phone||c.email)).slice(0,3);
-  const facts=[b.address,b.height_m?Math.round(b.height_m)+' m tall':null,b.floors?b.floors+' floors':null].filter(Boolean).join(' · ');
-  el.querySelector('.more').innerHTML=(facts?`<div class="mute" style="font-size:13px">${esc(facts)}</div>`:'')
-   +(more.length?`<div class="mute" style="font-size:13px;margin-top:6px">Also on file:</div>`:'')
-   +more.map(c=>`<div style="font-size:14px;margin-top:4px"><span class="chip">${esc(c.role)}</span> ${esc([c.name,c.company].filter(Boolean).join(' · '))} ${c.phone?`<a href="${esc(telHref(c.phone))}">${esc(c.phone)}</a>`:''} ${c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:''}</div>`).join('')
-   +(b.matterport.length?`<div class="acts" style="margin-top:6px"><a class="btn" target="_blank" rel="noopener" href="${esc(b.matterport[0].url)}">Look inside: 3D tour</a></div>`:'')}
- catch(_){}}
-/* ---------- select: fan out to the 5 detail endpoints, each pane fills as it lands ---------- */
-async function select(sp){const tok=++S.tok;S.sel=sp;S.d={};S.tab='h';renderList();drawMap();renderCard();
- const date=$('#date').value,p={lat:sp.lat,lon:sp.lon},ok=f=>r=>{if(tok===S.tok){f(r);renderCard();drawMap()}},bad=k=>()=>{if(tok===S.tok){S.d[k]=false;renderCard()}};
- call('/api/sun',{...p,date}).then(ok(r=>{S.d.sun=r;const m=r.filter(x=>x.elev_deg>0);S.t=Date.parse(sp.sun_visible_until)-20*6e4;photo()})).catch(bad('sun'));
- call('/api/spot/horizon',{...p,height_m:sp.height_m}).then(ok(r=>S.d.hz=r)).catch(bad('hz'));
- call('/api/scene',{...p,radius_m:200,eye_m:sp.eye_m||''}).then(ok(r=>S.d.scene=r)).catch(bad('scene'));
- call('/api/buildings',{...p,radius_m:150}).then(ok(r=>S.d.bld=r)).catch(bad('bld'))}
-function cross(){const d=S.d;if(!d.sun||!d.hz)return null;return blockTime(d.sun,hzf(d.hz),S.rise)}
-function photo(){}
-/* Vexcel oblique looking toward the sun (PhotoMeta), one request per spot and direction. */
-const PH={};
-function photoFor(sp,az){const k=sp.lat+','+sp.lon+'@'+Math.round(az);return PH[k]||=getJ('/api/photo',{lat:sp.lat,lon:sp.lon,look_az_deg:Math.round(az),radius_m:150,max_px:1024})
- .then(m=>({src:CFG.base+m.image_url,note:`${m.attribution}${m.captured?' · captured '+m.captured:''}${m.look_az_deg!=null?' · camera looks '+Math.round(m.look_az_deg)+'°':''}`}))}
-/* ---------- map ---------- */
-const cv=$('#map'),cx=cv.getContext('2d');let MW=0,MH=0;const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-function rng(s){return()=>(s=(s*1664525+1013904223)>>>0)/4294967296}
-/* Real map: Vexcel aerial tiles through the server; Esri World Imagery where Vexcel has none (204) or there is no server. */
-const TILES={};let redraw=0;
-function tile(z,x,y){const k=z+'/'+x+'/'+y;if(TILES[k])return TILES[k];const im=new Image();
- im.onload=()=>{im.ok=1;if(!redraw)redraw=requestAnimationFrame(()=>{redraw=0;drawMap()})};
- im.onerror=()=>{if(im.esri)return;im.esri=1;im.src=`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`};
- im.src=`${CFG.base}/api/tiles/vexcel/${z}/${x}/${y}`;return TILES[k]=im}
-function drawTiles(W,H){const{x0,x1,y0,y1}=MB,z=Math.max(0,Math.min(20,Math.ceil(Math.log2(W/(x1-x0)/256)))),N=2**z,sz=W/((x1-x0)*N);
- for(let ty=Math.floor(y0*N);ty<=Math.floor(y1*N);ty++)for(let tx=Math.floor(x0*N);tx<=Math.floor(x1*N);tx++){const im=tile(z,tx,ty);if(im.ok)cx.drawImage(im,(tx/N-x0)/(x1-x0)*W,(ty/N-y0)/(y1-y0)*H,sz+.5,sz+.5)}
- cx.fillStyle='rgba(8,40,72,.2)';cx.fillRect(0,0,W,H);
- cx.font='11px sans-serif';cx.fillStyle='rgba(255,255,255,.85)';cx.fillText('Imagery © Vexcel Imaging · Esri, Maxar, Earthstar Geographics',8,H-8)}
-function drawMap(){const dpr=devicePixelRatio||1;MW=cv.clientWidth;MH=cv.clientHeight;cv.width=MW*dpr;cv.height=MH*dpr;cx.setTransform(dpr,0,0,dpr,0,0);
- fitBB(MW,MH);viewBox();cx.fillStyle=css('--tint');cx.fillRect(0,0,MW,MH);drawTiles(MW,MH);
- const sun=css('--sun');
- for(const s of S.spots){const[X,Y]=px(s.lat,s.lon,MW,MH),R=8+s.score*20,g=cx.createRadialGradient(X,Y,0,X,Y,R*2);g.addColorStop(0,sun+(s.score>.6?'cc':'66'));g.addColorStop(1,sun+'00');cx.fillStyle=g;cx.beginPath();cx.arc(X,Y,R*2,0,7);cx.fill();cx.fillStyle=sun;cx.globalAlpha=.4+s.score*.6;cx.beginPath();cx.arc(X,Y,R*.4,0,7);cx.fill();cx.globalAlpha=1}
- const sp=S.sel;if(sp){const[X,Y]=px(sp.lat,sp.lon,MW,MH);cx.lineWidth=5;cx.strokeStyle=css('--ink');cx.beginPath();cx.arc(X,Y,9,0,7);cx.stroke();cx.lineWidth=2.5;cx.strokeStyle='#fff';cx.beginPath();cx.arc(X,Y,9,0,7);cx.stroke();
-  const sunp=S.d.sun||S.path;if(sunp&&sunp.length){const a=interp(sunp,Date.parse(sp.sun_visible_until)).az*rad;cx.strokeStyle=sun;cx.lineWidth=2;cx.setLineDash([6,5]);cx.beginPath();cx.moveTo(X,Y);cx.lineTo(X+Math.sin(a)*MW*.4,Y-Math.cos(a)*MW*.4);cx.stroke();cx.setLineDash([])}}}
-cv.onclick=e=>{if(Date.now()-MOVED<300)return;const b=cv.getBoundingClientRect(),x=e.clientX-b.left,y=e.clientY-b.top;let best=null,d=1e9;for(const s of S.spots){const[X,Y]=px(s.lat,s.lon,MW,MH),k=Math.hypot(X-x,Y-y);if(k<d){d=k;best=s}}if(best&&d<40)select(best)};
-/* Map pan and zoom: mouse drag, ctrl+wheel (trackpad pinch), the +/- buttons; on touch two fingers move and pinch,
-   one finger scrolls the page (so the map never traps scrolling). */
-let MOVED=0;const MZ=[.5,16];
-function zoomAt(sx,sy,f){const b=viewBox(),k=Math.max(MZ[0],Math.min(MZ[1],VIEW.k*f));f=k/VIEW.k;if(f===1)return;
- const pxm=b.x0+sx/MW*(b.x1-b.x0),pym=b.y0+sy/MH*(b.y1-b.y0),nw=(b.x1-b.x0)/f,nh=(b.y1-b.y0)/f,x0=mx(BB.w),x1=mx(BB.e),y0=my(BB.n),y1=my(BB.s);
- VIEW.k=k;VIEW.dx=pxm-(sx/MW-.5)*nw-(x0+x1)/2;VIEW.dy=pym-(sy/MH-.5)*nh-(y0+y1)/2;viewBox();mapDraw()}
-function panBy(dx,dy){const b=viewBox();VIEW.dx-=dx/MW*(b.x1-b.x0);VIEW.dy-=dy/MH*(b.y1-b.y0);viewBox();mapDraw()}
-let mraf=0;const mapDraw=()=>{if(!mraf)mraf=requestAnimationFrame(()=>{mraf=0;drawMap()})};
-document.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>zoomAt(MW/2,MH/2,+b.dataset.z));
-$('#mfit').onclick=()=>{VIEW.k=1;VIEW.dx=VIEW.dy=0;mapDraw()};
-let mdrag=null;
-cv.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;mdrag={x:e.clientX,y:e.clientY,d:0};cv.setPointerCapture(e.pointerId)});
-cv.addEventListener('pointermove',e=>{if(!mdrag)return;const dx=e.clientX-mdrag.x,dy=e.clientY-mdrag.y;mdrag.d+=Math.abs(dx)+Math.abs(dy);mdrag.x=e.clientX;mdrag.y=e.clientY;if(mdrag.d>4){panBy(dx,dy);cv.style.cursor='grabbing'}});
-cv.addEventListener('pointerup',()=>{if(mdrag&&mdrag.d>4)MOVED=Date.now();mdrag=null;cv.style.cursor=''});
-cv.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();const b=cv.getBoundingClientRect();zoomAt(e.clientX-b.left,e.clientY-b.top,Math.exp(-e.deltaY*.01))},{passive:false});
-let tch=null,hintT=0;
-const tmid=t=>{const b=cv.getBoundingClientRect();return{x:(t[0].clientX+t[1].clientX)/2-b.left,y:(t[0].clientY+t[1].clientY)/2-b.top,d:Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY)}};
-cv.addEventListener('touchstart',e=>{if(e.touches.length===2){e.preventDefault();tch=tmid(e.touches)}else if(e.touches.length===1)tch={one:[e.touches[0].clientX,e.touches[0].clientY]}},{passive:false});
-cv.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const m=tmid(e.touches);if(tch&&tch.d){panBy(m.x-tch.x,m.y-tch.y);zoomAt(m.x,m.y,m.d/tch.d);MOVED=Date.now()}tch=m}
- else if(tch&&tch.one){const dx=e.touches[0].clientX-tch.one[0],dy=e.touches[0].clientY-tch.one[1];if(Math.abs(dx)>24&&Math.abs(dx)>Math.abs(dy)*1.5){const h=$('#mhint');h.classList.add('on');clearTimeout(hintT);hintT=setTimeout(()=>h.classList.remove('on'),1400);tch=null}}},{passive:false});
-cv.addEventListener('touchend',e=>{if(e.touches.length<2&&tch&&tch.d)tch=null});
-cv.addEventListener('gesturestart',e=>e.preventDefault());
-/* ---------- spot card ---------- */
-const mix=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
-function pano(c){const W=720,H=280,gy=H-24,sc=9,a0=c.az-40,X=a=>(a-a0)/80*W,Y=e=>gy-e*sc,hf=hzf(S.d.hz),sp=interp(S.d.sun,S.t),t=Math.max(0,Math.min(1,(sp.el+4)/22)),top=mix([60,40,90],[84,140,200],t),bot=mix([255,120,60],[250,205,150],t);
- let path='',ticks='';for(const p of S.d.sun){if(p.az_deg<a0-2||p.az_deg>a0+82||p.elev_deg<-1)continue;path+=(path?'L':'M')+X(p.az_deg).toFixed(1)+' '+Y(p.elev_deg).toFixed(1);const d=new Date(p.t),mn=+d.toLocaleString('en-US',{timeZone:TZ,minute:'numeric'});if(mn===0&&p.elev_deg<27)ticks+=`<circle cx="${X(p.az_deg)}" cy="${Y(p.elev_deg)}" r="3" fill="#fff"/><text x="${X(p.az_deg)+7}" y="${Y(p.elev_deg)-6}" fill="#fff" font-size="12">${clk(p.t)}</text>`}
- let sil=`M0 ${H}`;for(let x=0;x<=W;x+=2)sil+=`L${x} ${Y(hf(a0+x/W*80))}`;sil+=`L${W} ${H}Z`;const sx=X(sp.az),sy=Y(sp.el);
- return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Skyline with the sun path"><defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgb(${top})"/><stop offset="1" stop-color="rgb(${bot})"/></linearGradient><radialGradient id="gl"><stop offset="0" stop-color="#fff2c4" stop-opacity=".9"/><stop offset="1" stop-color="#ffb04a" stop-opacity="0"/></radialGradient></defs><rect width="${W}" height="${H}" fill="url(#sk)"/>${sp.el>-3?`<circle cx="${sx}" cy="${sy}" r="46" fill="url(#gl)"/><circle cx="${sx}" cy="${sy}" r="11" fill="#fff6d8"/>`:''}<path d="${path}" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="2" stroke-dasharray="5 5"/>${ticks}<path d="${sil}" fill="#102a45"/><rect y="${gy}" width="${W}" height="24" fill="#0a1f33"/><text x="10" y="${H-7}" fill="#a9c3dc" font-size="12">${Math.round(a0)}°</text><text x="${W/2-14}" y="${H-7}" fill="#a9c3dc" font-size="12">${Math.round(c.az)}°</text><text x="${W-40}" y="${H-7}" fill="#a9c3dc" font-size="12">${Math.round(a0+80)}°</text></svg>`}
-function renderCard(){const sp=S.sel,d=S.d;if(!sp){$('#card').innerHTML='<div class="msg">Pick a spot to see the view from there.</div>';return}
- const c=cross(),ready=d.sun&&d.hz;let head=`<div><h2>${sp.id}</h2><p class="mute" style="margin:2px 0 0">${sp.standing?`Surface ${sp.height_m} m above sea level`:sp.height_m+' m up'}${sp.arrive_by?' · arrive by '+clk(sp.arrive_by):''} · ${sp.why}</p>`;
- if(c){const hf=hzf(d.hz),tw=hf(c.az)>1.5;head+=`<p style="margin:6px 0 0"><b>${S.rise?'Sun clears the buildings':tw?'Sun drops behind a tower':'Sun sets over open horizon'} at ${clk(c.ms)}</b></p>`}head+='</div>';
- const tabs=`<div class="row tabs" role="tablist" style="margin:0"><button role="tab" aria-selected="${S.tab==='h'}" data-t="h">Skyline</button><button role="tab" aria-selected="${S.tab==='3'}" data-t="3">3D view</button></div>`;
- let view;if(d.sun===false||d.hz===false)view='<div class="msg err">Could not load the sun path or skyline for this spot.</div>';else if(!ready||!c)view='<div class="msg" style="color:#fff">Loading skyline…</div>';else view=S.tab==='h'?pano(c):'<div id="v3"></div>';
- let sl='';if(ready&&d.sun.length){const lo=Date.parse(d.sun.find(p=>p.elev_deg>-2).t),hi=Date.parse([...d.sun].reverse().find(p=>p.elev_deg>-2).t);sl=`<div><label for="tm">Time: ${clk(S.t)}</label><input id="tm" type="range" min="${lo}" max="${hi}" step="60000" value="${S.t}"></div>`}
- const bl=d.bld===false?'<div class="msg err">Could not load building contacts.</div>':!d.bld?'<div class="msg">Loading buildings…</div>':!d.bld.length?'<div class="msg">No CoStar buildings near this spot (CoStar covers Los Angeles and Houston). Street-level spots may not need access.</div>':d.bld.map(b=>`<div class="bld"><b>${b.name}</b><br><span class="mute">${b.height_m?Math.round(b.height_m*3.28)+' ft · '+b.floors+' floors':'No building'}</span><br>${b.contact}${b.matterport_id?` · <a href="https://my.matterport.com/show/?m=${encodeURIComponent(b.matterport_id)}" target="_blank" rel="noopener">Matterport tour</a>`:''}</div>`).join('');
- $('#card').innerHTML=head+tabs+`<div class="view">${view}</div>`+sl+`<div class="cols"><div><h3 style="margin-bottom:6px">Aerial view</h3><img id="photo" alt="Aerial photo looking toward the sun"><p class="note" id="pnote"></p></div><div><h3 style="margin-bottom:6px">Who to ask</h3>${bl}</div></div>`;
- document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;renderCard()});
- const tm=$('#tm');if(tm)tm.oninput=e=>{S.t=+e.target.value;document.querySelector('label[for=tm]').textContent='Time: '+clk(S.t);if(S.tab==='h'&&ready&&c)document.querySelector('.view').innerHTML=pano(c);else sun3D()};
- if(c){const im=$('#photo'),fail=()=>{if(!im.isConnected)return;im.onerror=null;im.src=MOCK.photo(c.az);$('#pnote').textContent='Sample image. No Vexcel aerial photo for this spot.'};
-  photoFor(sp,c.az).then(m=>{if(S.sel!==sp||!im.isConnected)return;im.onerror=fail;im.src=m.src;$('#pnote').textContent=m.note}).catch(()=>{if(S.sel===sp)fail()})}
- if(S.tab==='3'&&ready&&c)build3D(c);else if(S.tab==='3'&&d.scene===false)document.querySelector('.view').innerHTML='<div class="msg err">Could not load the 3D scene.</div>'}
-/* ---------- 3D: x = east, y = up, z = south. grid: row-major, row 0 north, col 0 west, centred on the spot ---------- */
-const V=(az,el,r)=>new THREE.Vector3(Math.sin(az*rad)*Math.cos(el*rad)*r,Math.sin(el*rad)*r,-Math.cos(az*rad)*Math.cos(el*rad)*r);
-/* Realistic view (js/realview.js): Vexcel heights as blocks + Vexcel aerial photos + physical sky. Built once per spot,
-   re-mounted when the card re-renders. Falls back to the simple height-grid view without a server. */
-let T=null,RV=null,RVkey='',RVwait=null;
-function build3D(c){const host=$('#v3'),sp=S.sel;if(!host)return;const key=sp.lat+','+sp.lon;
- bigButton();
- if(RV&&RVkey===key){RV.mount(host);sun3D();return}
- if(RVwait&&RVkey===key){host.innerHTML='<div class="msg" style="color:#fff">Building the 3D city…</div>';return}
- if(RV){RV.dispose();RV=null}RVkey=key;host.innerHTML='<div class="msg" style="color:#fff">Loading the 3D city…</div>';
- const onStatus=t=>{const h=$('#v3');if(h&&t&&!h.querySelector('canvas'))h.innerHTML=`<div class="msg" style="color:#fff">${t}</div>`};
- RVwait=(async()=>{
-  // Vexcel's photographed 3D mesh where it exists (LA, Houston); else Vexcel heights + aerial photos (realview.js)
-  let at=null;try{const r=await fetch(`${CFG.base}/api/mesh/at?lat=${sp.lat}&lon=${sp.lon}`);if(r.ok)at=await r.json()}catch(_){}
-  if(at){try{const m=await import('./js/meshview.js');return await m.create({host,base:CFG.base,lat:sp.lat,lon:sp.lon,yaw:c.az,tilesetUrl:at.tileset_url,attribution:at.attribution,onStatus})}
-   catch(e){console.warn('golden: Vexcel mesh view failed, using the height-map view:',e.message)}}
-  const m=await import('./js/realview.js');
-  return m.create({host,base:CFG.base,lat:sp.lat,lon:sp.lon,eyeM:sp.eye_m??null,yaw:c.az,desktop:innerWidth>900,onStatus})})()
-  .then(v=>{RVwait=null;if(RVkey!==key){v.dispose();return}RV=v;const h=$('#v3');if(h)v.mount(h);sun3D()})
-  .catch(e=>{RVwait=null;RVkey='';console.warn('golden: realistic 3D failed, using the simple view:',e.message);if(S.d.scene)buildSimple(c)})}
-function bigButton(){const v=document.querySelector('.view');if(!v||v.querySelector('#bigbtn'))return;const b=document.createElement('button');b.id='bigbtn';
- b.textContent=v.classList.contains('big')?'Close':'Full screen';b.onclick=()=>{v.classList.toggle('big');b.textContent=v.classList.contains('big')?'Close':'Full screen'};v.appendChild(b)}
-function buildSimple(c){const host=$('#v3'),sc=S.d.scene,sp=S.sel;if(!host||!sc)return;host.innerHTML='';
- try{if(!T){T={r:new THREE.WebGLRenderer({antialias:true}),cam:new THREE.PerspectiveCamera(62,1,1,3000),yaw:0};}}catch(e){host.innerHTML='<div class="msg" style="color:#fff">3D needs WebGL, which is not available here.</div>';return}
- const w=host.clientWidth||600,h=host.clientHeight||320;T.r.setSize(w,h);T.cam.aspect=w/h;T.cam.updateProjectionMatrix();host.appendChild(T.r.domElement);
- if(T.s)T.s.traverse(o=>{o.geometry?.dispose();o.material?.dispose()});
- const s=new THREE.Scene(),n=sc.n,L=(n-1)*sc.cell_m,g=new THREE.PlaneGeometry(L,L,n-1,n-1);g.rotateX(-Math.PI/2);
- const P=g.attributes.position,col=[];for(let i=0;i<P.count;i++){const y=sc.heights[i]||0;P.setY(i,y);const k=Math.min(1,y/120);col.push(.25+.35*k,.3+.3*k,.4+.4*k)}
- g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();s.add(new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true})));
- const pts=S.d.sun.filter(p=>p.elev_deg>0).map(p=>V(p.az_deg,p.elev_deg,900));s.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xffffff})));
- T.sun=new THREE.Mesh(new THREE.SphereGeometry(26,16,16),new THREE.MeshBasicMaterial({color:0xfff2c4}));s.add(T.sun);T.dl=new THREE.DirectionalLight(0xffd9a0,1);s.add(T.dl,new THREE.AmbientLight(0x8890a8,.7));
- T.s=s;T.yaw=c.az;T.cam.position.set(0,sc.eye??sp.height_m+2,0);sun3D();
- const el=T.r.domElement;let drag=null;el.onpointerdown=e=>{drag=e.clientX;el.setPointerCapture(e.pointerId)};el.onpointerup=()=>drag=null;el.onpointermove=e=>{if(drag===null)return;T.yaw-=(e.clientX-drag)*.25;drag=e.clientX;sun3D()}}
-function sun3D(){if(RV&&S.d.sun){const p=interp(S.d.sun,S.t);RV.setSun(p.az,p.el);return}if(!T||!T.s||!S.d.sun)return;const p=interp(S.d.sun,S.t),v=V(p.az,Math.max(p.el,-5),900);T.sun.position.copy(v);T.sun.visible=p.el>-3;T.dl.position.copy(v);T.dl.intensity=Math.max(.1,Math.min(1.2,p.el/12+.3));
- const t=Math.max(0,Math.min(1,(p.el+4)/22)),a=mix([60,40,90],[84,140,200],t);T.s.background=new THREE.Color(`rgb(${a})`);
- const d=V(T.yaw,6,1);T.cam.lookAt(T.cam.position.clone().add(d));T.r.render(T.s,T.cam)}
-/* ---------- MOCK server (same shapes as the contract) ---------- */
-const SP=[['Bunker Hill parking roof',.34,.30,38,[298,3.4],'rooftop'],['Wilshire Grand terrace',.22,.62,52,[296,5.5],'rooftop'],['Arts District garage',.80,.52,24,null,'rooftop'],['6th St Viaduct deck',.86,.30,20,[301,4.2],'bridge'],['Pershing Square roof',.46,.56,44,[294,2.8],'rooftop'],['Angels Flight overlook',.52,.24,6,null,'street'],['Little Tokyo garage',.70,.20,30,[299,3.9],'rooftop'],['Olympic Blvd west lot',.12,.84,4,[297,6.5],'street']].map((a,i)=>{const r=rng(i*977+13),s={id:a[0],lat:+(BB.n-a[2]*(BB.n-BB.s)).toFixed(5),lon:+(BB.w+a[1]*(BB.e-BB.w)).toFixed(5),h:a[3],gap:a[4],type:a[5],t:[]};
- for(const[x,y]of[[235,312],[48,125]])for(let k=0;k<8;k++){const c=x+r()*(y-x);if(s.gap&&Math.abs(c-s.gap[0])<s.gap[1]+3)continue;s.t.push({c,w:.8+r()*2.2,e:2+r()*(7+s.h/9)})}
- if(s.gap)s.t.push({c:s.gap[0]-s.gap[1],w:2,e:13+s.h/12,g:1},{c:s.gap[0]+s.gap[1],w:2,e:11+s.h/14,g:1});return s});
-const near=(lat,lon)=>SP.reduce((m,s)=>Math.hypot(s.lat-lat,s.lon-lon)<Math.hypot(m.lat-lat,m.lon-lon)?s:m);
-const prof=(s,az)=>{let e=.6;for(const t of s.t)if(Math.abs(az-t.c)<=t.w&&t.e>e)e=t.e;return e};
-const dst=date=>{const m=+date.split('-')[1]-1;return m>=2&&m<=9};
-const iso=(date,min)=>`${date}T${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}:00${dst(date)?'-07:00':'-08:00'}`;
-function sunAt(date,min,lat,lon){const[Y,M,D]=date.split('-').map(Number),n=Math.floor((Date.UTC(Y,M-1,D)-Date.UTC(Y,0,0))/864e5),off=dst(date)?-7:-8,g=2*Math.PI/365*(n-1),eot=229.18*(.000075+.001868*Math.cos(g)-.032077*Math.sin(g)-.014615*Math.cos(2*g)-.040849*Math.sin(2*g)),dec=.006918-.399912*Math.cos(g)+.070257*Math.sin(g)-.006758*Math.cos(2*g)+.000907*Math.sin(2*g)-.002697*Math.cos(3*g)+.00148*Math.sin(3*g),H=((min+eot+4*lon-60*off)/4-180)*rad,p=lat*rad,el=Math.asin(Math.sin(p)*Math.sin(dec)+Math.cos(p)*Math.cos(dec)*Math.cos(H));
- return{az:(Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(p)-Math.tan(dec)*Math.cos(p))/rad+540)%360,el:el/rad}}
-function sunPath(date,lat,lon){const o=[];for(let m=0;m<1440;m+=5){const p=sunAt(date,m,lat,lon);if(p.el>-6)o.push({t:iso(date,m),az_deg:+p.az.toFixed(2),elev_deg:+p.el.toFixed(2)})}return o}
-function horizon(s){return Array.from({length:360},(_,a)=>({az_deg:a,elev_deg:+prof(s,a).toFixed(2)}))}
-const MOCK={
- async '/api/search'(_,b){AREA=null;BB={n:34.066,s:34.034,w:-118.272,e:-118.224};b={...b,date:b.date||new Date().toISOString().slice(0,10)};$('#date').value=b.date;const q=b.brief.toLowerCase(),rise=/sunrise|dawn/.test(q),res=SP.map(s=>{const p=sunPath(b.date,s.lat,s.lon),c=blockTime(p,hzf(horizon(s)),rise);let sc=.35,why=[];
-  const gap=s.gap&&c&&Math.abs(c.az-s.gap[0])<s.gap[1]-.4;if(/roof/.test(q)&&s.type==='rooftop'){sc+=.15;why.push('rooftop')}if(/street|ground/.test(q)&&s.type==='street'){sc+=.15;why.push('street level')}if(/bridge/.test(q)&&s.type==='bridge'){sc+=.15;why.push('bridge')}
-  if(gap){sc+=/between|gap|framed/.test(q)?.32:.12;why.push('the sun sets in the gap between two towers')}else if(/between/.test(q))sc-=.08;sc+=Math.min(.08,s.h/640);
-  return{id:s.id,lat:s.lat,lon:s.lon,height_m:s.h,score:+Math.max(.05,Math.min(.99,sc)).toFixed(2),sun_visible_until:c?iso(b.date,Math.round((c.ms-Date.parse(iso(b.date,0)))/6e4)):iso(b.date,1080),why:(why.length?why.join(', '):'open horizon')[0].toUpperCase()+(why.length?why.join(', '):'open horizon').slice(1)+'.'}}).sort((a,b)=>b.score-a.score).slice(0,6);
-  const top=res[0];return{spots:res,sun_path:sunPath(b.date,top.lat,top.lon),call_sheet_text:`Shoot date ${b.date}\nBrief: ${b.brief}\n\n`+res.slice(0,3).map((s,i)=>`${i?'Backup':'Primary'}: ${s.id}\n  Sun gone at ${clk(s.sun_visible_until)}. ${s.why}`).join('\n\n')+'\n\n(Sample data)'}},
- async '/api/sun'(p){return sunPath(p.date||new Date().toISOString().slice(0,10),+p.lat,+p.lon)},
- async '/api/spot/horizon'(p){return horizon(near(+p.lat,+p.lon))},
- async '/api/scene'(p){const s=near(+p.lat,+p.lon),cell=4,n=Math.min(121,Math.floor(2*(+p.radius_m||200)/cell)+1),c=(n-1)/2,hs=new Array(n*n).fill(0);
-  for(const t of s.t){const d=70+(t.c*13)%110,bx=Math.sin(t.c*rad)*d/cell+c,bz=-Math.cos(t.c*rad)*d/cell+c,hw=(d*Math.tan(t.w*rad)+5)/cell,H=s.h+Math.tan(t.e*rad)*d;for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(Math.abs(j-bx)<hw&&Math.abs(i-bz)<hw)hs[i*n+j]=Math.max(hs[i*n+j],+H.toFixed(1))}
-  return{n,cell_m:cell,heights:hs}},
- async '/api/buildings'(p){const s=near(+p.lat,+p.lon),f=(n,ft,fl,c,m)=>({name:n,height_m:+(ft*.3048).toFixed(1),floors:fl,contact:c,matterport_id:m});
-  return[f(s.id.replace(/ (roof|garage|terrace|deck|lot)$/,'')+' building (sample)',s.type==='street'?0:Math.round(s.h*3.6),Math.round(s.h/3),'Leasing office (sample contact)',s.id.startsWith('Wilshire')?'sample-id':null),f('Neighbouring tower (sample)',420,31,'Property manager (sample contact)',null)]},
- photo(az){const c=document.createElement('canvas');c.width=480;c.height=300;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,300);g.addColorStop(0,'#5a3f7a');g.addColorStop(1,'#f5905a');x.fillStyle=g;x.fillRect(0,0,480,300);x.fillStyle='#232a3c';const r=rng(Math.round(az));for(let i=0;i<14;i++){const w=20+r()*40,h=40+r()*150;x.fillRect(i*36,300-h,w,h)}x.fillStyle='#fff';x.font='13px sans-serif';x.fillText('Sample view toward '+Math.round(az)+'°',12,22);return c.toDataURL()}};
-/* Live 3D homepage loaded separately; frontend-only implementation. */
-/* ---------- wire up ---------- */
-$('#find').onclick=search;$('#date').onchange=()=>DATE_SET=!!$('#date').value;$('#save').onclick=()=>{CFG.base=$('#base').value.replace(/\/$/,'');for(const k in LIVE)delete LIVE[k];showApi();search()};
-$('#copy').onclick=async e=>{try{await navigator.clipboard.writeText(S.sheet);e.target.textContent='Copied'}catch(_){e.target.textContent='Select the text to copy'}setTimeout(()=>e.target.textContent='Copy text',1500)};
-addEventListener('resize',drawMap);search();
-</script>
-<script src="golden-hero.js"></script>
+  <aside id="goals" aria-label="Goals">
+    <h2>What I’m filtering for</h2>
+    <p class="lede">I turned the brief into these goals. Change a weight or a must and the map and spots update straight away.</p>
+    <div id="glists"></div>
+    <button id="addgoal" type="button" hidden>Add a goal: tell me in the chat</button>
+  </aside>
+
+  <section id="stage" aria-label="Results">
+    <div id="funnel" aria-label="How the points were cut down"></div>
+    <div class="mapwrap">
+      <canvas id="map" aria-label="Map of candidate points, coloured by score"></canvas>
+      <div id="layers" role="toolbar" aria-label="Map layer"></div>
+      <div id="legend" hidden></div>
+      <div class="mapctl"><button type="button" id="zin" aria-label="Zoom in">+</button><button type="button" id="zout" aria-label="Zoom out">&minus;</button><button type="button" id="zfit" aria-label="Back to the searched area" title="Back to the searched area"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></button></div>
+      <button type="button" id="searcharea" hidden data-needs-server>Search this area</button>
+      <div id="busy" role="status" hidden></div>
+      <div class="attrib" id="attrib"></div>
+      <div class="empty" id="mapempty"><p>The map fills in once the brief is clear: every point I can stand on, coloured by how well it fits.</p></div>
+    </div>
+    <div id="toast" role="status" hidden></div>
+    <article id="spot" hidden aria-label="Selected spot"></article>
+  </section>
+
+  <section id="chat" aria-label="Brief">
+    <div class="top"><h2>Tell me the shot</h2><button type="button" id="newbrief">New brief</button></div>
+    <div id="log" aria-live="polite"></div>
+    <div id="known"></div>
+    <div id="choices"></div>
+    <button id="gonow" type="button" hidden>Search now with my picks</button>
+    <form id="say"><label class="sr" for="msg">Message</label><textarea id="msg" rows="1" placeholder="Describe the shot"></textarea><button>Send</button></form>
+  </section>
+</main>
+<script type="module" src="v2/js/app.js"></script>
 </body></html>

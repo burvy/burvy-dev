@@ -246,8 +246,9 @@ Fall 2026), kept at `Z:\3Projects\golden`, so **not** next to this folder like t
 It shows up here as the `/golden` experience.
 
 ## How it is wired
-- Golden's web front end (golden's `web/`: `index.html`, `golden-hero.js`, `js/`) is a static
-page. It is copied as-is into `assets/golden-app/` and that copy is committed, the same as
+- Golden's web front end (golden's `web/`) is a static page. `index.html` is the current
+page (code in `v2/js/`), `classic/` is golden's first page (it uses `js/` and `golden-hero.js`,
+and the current page links to it), and `v2/` only redirects to `index.html`. It is copied as-is into `assets/golden-app/` and that copy is committed, the same as
 `metric-balls` and `3d-learn`. `index.html` has a `copy-dir` for it, so it ends up in
 `/golden-app/`. (Not `/golden/`: if a folder has the same name as the route, `trunk serve`
 redirects `/golden` to that folder, so a reload would open golden's page on its own, without
@@ -266,8 +267,9 @@ API address (without it, it uses its own default, `http://localhost:8787`), so h
 `/golden/api/...` on this site's address. Primer already has `/api/`, so golden gets its
 own prefix.
 - `Trunk.toml` sends `/golden/api/` to golden's server at `127.0.0.1:8787/api/`.
-- If an endpoint does not answer, golden's page uses its own sample data for just that
-endpoint and says so in its header ("Sample data for ..."), so the page never breaks.
+- If golden's server does not answer, the page shows saved example data and says so in its
+header ("Example data (server not reachable)"), so the page never breaks. (The classic page
+does the same per endpoint: "Sample data for ...".)
 - The card image `assets/images/golden.png` is a **placeholder** (2000x1000), to be drawn.
 
 ## Running locally
@@ -285,13 +287,12 @@ Then, in this folder:
 ```
 trunk serve --release
 ```
-Open http://localhost:8080/golden. Golden's header says "Connected to server" when every
-call reached the server, or lists the ones that are on sample data.
+Open http://localhost:8080/golden. If golden's header says "Example data", the page could not
+reach golden's server.
 
 ## Known issues
 - The copy in `assets/golden-app/` does not update by itself; refresh it (above) when golden's
-web changes. Golden's task 043 (3D view quality) will change `web/js/`, so refresh the copy
-after it merges.
+web changes.
 - Golden's page loads three.js, fonts and map tiles from other sites (CDNs, Esri), so it needs
 the internet even locally.
 
