@@ -315,9 +315,9 @@ hackathon only, so it never goes to the server PC and `COSTAR_KIT_DIR` stays uns
 Golden then has no CoStar building names or contacts (call sheets just have no contacts, and
 `/api/buildings` gives empty lists); search, chat, objects found in the cached Vexcel
 detections, photos and 3D all work.
-2. **Build** (dev PC): pull golden's `main` in `Z:\3Projects\golden` (at least `2fe161d`; `8f691d8` is the
+2. **Build** (dev PC): pull golden's `main` in `Z:\3Projects\golden` (at least `170eedd`, which is also the
 last one tested for going live: 041's guards, 053's cached detections, the chat's shot default
-and replan fix, and the cost-function library), then `.\build.ps1 -Deploy` here (or
+and replan fix, the public call-sheet wording, and the cost-function library), then `.\build.ps1 -Deploy` here (or
 `.\build.ps1 -ServersOnly -Servers golden`, or `.\menu.ps1` and pick `golden-server`). It puts
 `deploy\golden-server.exe` beside the other servers. (Golden's own name for it is
 `server.exe`; it is renamed because `deploy\server.exe` is the chat server.) It needs no other
