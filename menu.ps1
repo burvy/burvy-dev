@@ -40,6 +40,7 @@ $Targets = @(
     @{ Label = 'plgroup-server';             Kind = 'server'; Server = 'plgroup' }
     @{ Label = 'primer-server';              Kind = 'server'; Server = 'primer' }
     @{ Label = 'rambl-server (from ..\ai-todo, or another checkout)'; Kind = 'server'; Server = 'rambl' }
+    @{ Label = 'golden-server (from Z:\3Projects\golden)'; Kind = 'server'; Server = 'golden' }
 )
 
 function Build-Module($module) {

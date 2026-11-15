@@ -20,7 +20,7 @@
 #                                   Servers are RELEASE builds. Add -Modules to rebuild
 #                                   only some modules (-Modules @() for none: the
 #                                   modules already built go in)
-#   .\build.ps1 -Deploy -Servers amity    only some servers (chat, amity, sandbags, floret, plgroup, primer, rambl)
+#   .\build.ps1 -Deploy -Servers amity    only some servers (chat, amity, sandbags, floret, plgroup, primer, rambl, golden)
 #   .\build.ps1 -Deploy -SkipStatesmc     everything but the StatesMC site (deploy\statesmc\ is
 #                                   left out)
 #   .\build.ps1 -Deploy -KeepGoing        a module, server or the StatesMC site that fails
@@ -60,7 +60,7 @@
 # one game without touching the rest.
 param(
     [string[]] $Modules = @('plgroup', 'life-wasm', 'amity-wasm', 'sandbags-wasm', 'floret-wasm', 'venture-wasm', 'primer-wasm'),
-    [string[]] $Servers = @('chat', 'amity', 'sandbags', 'floret', 'plgroup', 'primer', 'rambl'),
+    [string[]] $Servers = @('chat', 'amity', 'sandbags', 'floret', 'plgroup', 'primer', 'rambl', 'golden'),
     [string] $RamblDir = '..\ai-todo',
     [switch] $Deploy,
     [switch] $Dev,
@@ -97,6 +97,8 @@ $ServerList = @(
             Pop-Location
         }
     } }
+    # golden's package is also called `server`, so Exe renames it: deploy\server.exe is the chat server's.
+    @{ Name = 'golden'; Dir = '..\..\3Projects\golden'; Package = 'server'; Exe = 'golden-server'; DevArgs = @() }
 )
 
 $AllModules = @('plgroup', 'life-wasm', 'amity-wasm', 'sandbags-wasm', 'floret-wasm', 'venture-wasm', 'primer-wasm')
@@ -174,7 +176,8 @@ function Build-Servers {
             $exe = Join-Path $targetDir "x86_64-pc-windows-msvc\$profileDir\$($server.Package).exe"
             if (-not (Test-Path $exe)) { $exe = Join-Path $targetDir "$profileDir\$($server.Package).exe" }
             if (-not (Test-Path $exe)) { throw "expected $($server.Package) at $exe" }
-            Copy-Item -Force $exe (Join-Path $DestDir "$($server.Package).exe")
+            $name = if ($server.Exe) { $server.Exe } else { $server.Package }
+            Copy-Item -Force $exe (Join-Path $DestDir "$name.exe")
         } }
     }
 }

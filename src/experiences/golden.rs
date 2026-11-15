@@ -5,7 +5,9 @@ use leptos::prelude::*;
 // It is in `/golden-app/`, not `/golden/`: a folder named like the route would
 // make a reload of /golden open golden's page on its own instead of this site.
 // `?api=/golden` makes it call `/golden/api/...` on this site's address:
-// Trunk.toml sends that to golden's server (port 8787) when testing locally.
+// Trunk.toml sends that to golden's server (port 8787) when testing locally, and
+// on burvy.dev nginx does the same (README, "Golden: going live"), so the same
+// path works on every host and nothing here has to pick by hostname.
 #[component]
 pub fn Golden() -> impl IntoView {
     view! {

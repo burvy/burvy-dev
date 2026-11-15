@@ -296,47 +296,78 @@ web changes.
 - Golden's page loads three.js, fonts and map tiles from other sites (CDNs, Esri), so it needs
 the internet even locally.
 
-## Going live
-Not done yet. burvy.dev is static, so on the live site `/golden/api/` (on the site's own
-address) has to reach golden's server.
+## Golden: going live
+burvy.dev is static files served by nginx on the server PC (see "Building": `.\menu.ps1` lists
+what changed, and you copy it over). Golden's API goes on the **same address**: nginx sends
+`https://burvy.dev/golden/api/...` to golden's server at `127.0.0.1:8787/api/...` on the same PC.
+So, unlike Primer and plgroup, there is **no** `golden-api` subdomain, no Cloudflare rule, no
+origin certificate, no CORS and no new port to open: golden's server only listens on the PC
+itself. The iframe's `?api=/golden` is the same locally (Trunk's proxy) and live (nginx).
 
-**Plan: cache only.** The hackathon Vexcel key stays valid until after judging and then
-expires, so the live server runs **without** a Vexcel key and serves only what is already in its cache: downtown LA and
-Princeton (the areas fetched during the hackathon). Golden's server already does this when it
-has no key: map tiles, aerial photos, the 3D mesh and Vexcel heights come from the cache
-(cached ~0.9 m height tiles stand in for missing 6 cm ones), and heights fall back to free
-USGS LiDAR where nothing is cached. Elsewhere the map has no imagery. (A stricter cache-only
-switch with deploy guardrails is golden's task 041, deferred for now; use it once it exists.)
+**Cache only.** The hackathon Vexcel key expires on 2026-11-15, so the live server runs
+**without** a Vexcel key and with `GOLDEN_OFFLINE=1`: it never downloads anything (Vexcel,
+LiDAR, Google) and serves only what is in its cache, downtown LA and Princeton (the areas
+fetched during the hackathon). Elsewhere it answers with a clear "not available offline".
 
-Checklist:
+Checklist (all on the server PC unless it says otherwise):
 1. **CoStar licence first.** The CoStar data kit (`COSTAR_KIT_DIR`) was given for the
 hackathon. Before anything is public, check that its licence allows showing its building
-data (names, contacts) on a public site. If it doesn't, run the server without
-`COSTAR_KIT_DIR` (building lookups then use golden's fixtures).
-2. Where it runs: golden's server on the server PC, next to the other servers, from a folder
-like `C:\burvy\golden\` (build it with `cargo build --release -p server` in golden).
-3. Cache: copy golden's cache (LA + Princeton; on the dev PC `Z:\3Projects\golden-cache`) to
-`C:\burvy\data\golden\cache\` and point `VEXCEL_CACHE_DIR` (and `LIDAR_CACHE_DIR`) at it.
-Without a key it can't grow from Vexcel; LiDAR lookups outside the cache still add files, so
-keep an eye on the disk.
-4. Bind address: `GOLDEN_ADDR` (default `127.0.0.1:8787`). Keep it on `127.0.0.1` if the
-reverse proxy runs on the server PC; set it (e.g. `0.0.0.0:8787`, firewall open) only if the
-proxy is somewhere else.
-5. Reverse proxy: `https://burvy.dev/golden/api/*` to golden's `/api/*` (for example a
-Cloudflare Tunnel, or an Origin Rule plus a proxy on the server PC). The address is the
-site's own, so golden's server needs no CORS and the iframe's `?api=/golden` stays the same.
-6. Keys live on the server PC only, **never** in either repo. Golden reads each key from the
-environment, else from its own key file, else from the shared `.env` in `GOLDEN_ENV_FILE`.
-A key file can hold just the bare key on one line, e.g. `ANTHROPIC_ENV_FILE` =
-`C:\burvy\secrets\golden\anthropic.key`. For cache only: **no** `VEXCEL_API_KEY` and no
-`VEXCEL_ENV_FILE` (and none in the shared `.env`). `ANTHROPIC_API_KEY` is optional: without it, golden plans the shot offline (its call sheet says "planned
-offline"). `COSTAR_KIT_DIR` (see 1). `GOOGLE_MAPS_API_KEY` only if you want place search.
-7. Rate limits: if an Anthropic key is set, every brief costs credit paid by burvy. Add a
-per-IP limit on `/golden/api/` (in the proxy, or with Cloudflare rate limiting) before
-linking it anywhere, and set a spending limit on the key.
-8. Tell visitors what works: the brief should name downtown LA or Princeton (the hero brief
-does). Elsewhere there is no imagery.
-9. Take "(BACKEND OFFLINE)" off golden's card in `src/experiences/mod.rs`.
+data (names, contacts) on a public site. If it doesn't, leave `COSTAR_KIT_DIR` unset
+(golden then shows no building names or contacts; everything else works).
+2. **Build** (dev PC): pull golden's `main` in `Z:\3Projects\golden`, then
+`.\build.ps1 -Deploy` here (or `.\menu.ps1` and pick `golden-server`). It puts
+`deploy\golden-server.exe` beside the other servers. (Golden's own name for it is
+`server.exe`; it is renamed because `deploy\server.exe` is the chat server.) It needs no other
+files: the cost-function library is built into it.
+3. **Folder**: copy `golden-server.exe` to `C:\burvy\golden\`.
+4. **Cache**: copy golden's cache (on the dev PC `Z:\3Projects\golden-cache`) to
+`C:\burvy\data\golden\cache\`.
+5. **Keys** live on the server PC only, **never** in either repo. **No** Vexcel key (no
+`VEXCEL_API_KEY`, no `VEXCEL_ENV_FILE`). Claude is optional: without a key golden plans the
+shot offline (its call sheet says "planned offline"). With one, put the bare key on one line in
+`C:\burvy\secrets\golden\anthropic.key`, and set a **monthly spending limit** on that key in
+the Anthropic console: every chat costs credit paid by burvy.
+6. **Run it** with these set, the same way as the other servers (and in the scheduled restart):
+```
+GOLDEN_ADDR=127.0.0.1:8787
+GOLDEN_OFFLINE=1
+VEXCEL_CACHE_DIR=C:\burvy\data\golden\cache                (LiDAR uses it too, under lidar\)
+ANTHROPIC_ENV_FILE=C:\burvy\secrets\golden\anthropic.key   (optional, see 5)
+COSTAR_KIT_DIR=C:\burvy\data\golden\costar                 (only if 1 says yes)
+```
+Check it: `curl http://127.0.0.1:8787/api/health` on the server PC answers 200.
+7. **nginx**: in `nginx.conf`, inside the `server { ... }` block that serves burvy.dev (if there
+is one for port 80 and one for 443, put it in both), paste:
+```
+    # golden's API (burvy-dev README, "Golden: going live")
+    location ^~ /golden/api/ {
+        proxy_pass http://127.0.0.1:8787/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header CF-Connecting-IP $http_cf_connecting_ip;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        client_max_body_size 256k;
+        proxy_read_timeout 180s;
+        proxy_send_timeout 180s;
+    }
+```
+`^~` makes it win over any regex `location` (such as one caching `*.png`/`*.js`, which would
+otherwise catch golden's map tiles). The trailing `/` on both paths swaps `/golden/api/` for
+`/api/`. `proxy_read_timeout` is long because a chat answer can take ~40 s. Golden's rate
+limits read the visitor's address from `CF-Connecting-IP`, so keep that line. Then
+`nginx -t` (checks the file) and `nginx -s reload`, from nginx's folder.
+8. **Optional, Cloudflare**: a rate-limiting rule for `burvy.dev/golden/api/*` (the free plan
+has one rule), on top of golden's own limits.
+9. **Upload the site**: `.\menu.ps1`, pick `burvy.dev site`, and copy the files it lists from
+`deploy\burvy-dev\dist\` to the server, including the `golden-app\` folder.
+10. **Smoke test**: open https://burvy.dev/golden. Golden's header must **not** say "Example
+data". Ask for a sunset spot in downtown LA: it returns spots, and the photo and 3D view load.
+https://burvy.dev/golden/api/health answers 200.
+11. Tell visitors what works: the brief should name downtown LA or Princeton.
+
+To take it down: stop `golden-server.exe`. The page then shows its saved example data and says
+so ("Example data (server not reachable)"); nothing else on the site is affected.
 
 # Adding Items From Other Crates
 To add a new big item, follow this checklist, and note, replace `<!name!> 
