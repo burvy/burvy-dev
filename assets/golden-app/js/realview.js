@@ -128,13 +128,15 @@ function ringGeometry(H, n, cell, cut, ground, drop, veg) {
   g.setAttribute('ground', new THREE.BufferAttribute(gnd, 1));
   g.setAttribute('veg', new THREE.BufferAttribute(veg, 1));
   g.setIndex(idx);
+  g.computeVertexNormals();
   return g;
 }
 
 /* The photo on top; on steep faces (walls) a facade with windows tinted by the photo, except where the photo is green
    (tree canopy), which stays foliage. Windows glow after sunset. */
 function surfaceMaterial(photoTex, facade, shared) {
-  const m = new THREE.MeshStandardMaterial({ map: photoTex, roughness: .92, metalness: 0, flatShading: true });
+  // smooth vertex normals, but buildings get flat facets back in the shader (only canopy stays smooth)
+  const m = new THREE.MeshStandardMaterial({ map: photoTex, roughness: .92, metalness: 0 });
   m.onBeforeCompile = sh => {
     sh.uniforms.facadeMap = { value: facade.map };
     sh.uniforms.facadeGlow = { value: facade.emissiveMap };
@@ -144,6 +146,9 @@ function surfaceMaterial(photoTex, facade, shared) {
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvW = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvGround = ground;\nvVeg = veg;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nuniform sampler2D facadeMap;\nuniform sampler2D facadeGlow;\nuniform float night;\nvarying vec3 vW;\nvarying float vGround;\nvarying float vVeg;\nfloat gSteep; float gWin; vec2 gFuv;\nfloat gSteepPre(vec3 n) { return 1.0 - smoothstep(0.35, 0.7, abs(n.y)); }')
+      .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
+        vec3 flatN = normalize(cross(dFdx(vViewPosition), dFdy(vViewPosition)));
+        normal = normalize(mix(flatN, normal, smoothstep(0.3, 0.55, vVeg)));`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         vec3 wN = inverseTransformDirection(normal, viewMatrix);
         vec3 pc = diffuseColor.rgb;
@@ -156,7 +161,7 @@ function surfaceMaterial(photoTex, facade, shared) {
         gWin = gSteep * (1.0 - green) * step(1.0, vW.y - vGround);
         diffuseColor.rgb = mix(pc, fac * tint * 1.15, gWin);
         float leaf = 0.75 + 0.25 * sin(vW.x * 1.7 + vW.y * 2.3) * sin(vW.z * 1.9 - vW.y * 1.3);
-        diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.13, 0.19, 0.08), pc, 0.25) * leaf, gSteep * green);`)
+        diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.2, 0.28, 0.12), pc, 0.6) * leaf, gSteep * green);`)
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += texture2D(facadeGlow, gFuv).rgb * gWin * night * 0.9;');
   };
   return m;
@@ -315,7 +320,7 @@ export async function create({ host, base = '', lat, lon, eyeM = null, yaw = 270
       sun.visible = elev > -1;
       sun.position.copy(cam.position).addScaledVector(dir, 2000);
       sun.target.position.set(cam.position.x, 0, cam.position.z); sun.target.updateMatrixWorld();
-      hemi.intensity = lerp(.06, .5, day);
+      hemi.intensity = lerp(.06, .95, day);
       hemi.color.copy(hazeColor(elev)).lerp(new THREE.Color('#a9c4e8'), day * .6);
       renderer.toneMappingExposure = lerp(.7, .42, day);
       scene.fog.color.copy(hazeColor(elev));

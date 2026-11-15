@@ -162,7 +162,7 @@ const REAL={
   TZ=br.tz;AREA=br.area;$('#date').value=br.date;
   return{spots:sh.spots.map(spotUI),sun_path:[],call_sheet_text:sheetText(sh),call_sheet:sh}},
  async '/api/sun'(p){return(await getJ('/api/sun',{lat:p.lat,lon:p.lon,date:p.date,tz:TZ,step_min:5})).points},
- async '/api/spot/horizon'(p){const r=await getJ('/api/horizon',{lat:p.lat,lon:p.lon,above_m:1.7,radius_m:700,step_deg:1});return r.points.map(q=>({az_deg:q.az_deg,elev_deg:q.elev_deg}))},
+ async '/api/spot/horizon'(p){const r=await getJ('/api/horizon',{lat:p.lat,lon:p.lon,above_m:1.7,step_deg:1});return r.points.map(q=>({az_deg:q.az_deg,elev_deg:q.elev_deg}))},
  async '/api/scene'(p){const m=await getJ('/api/scene',{lat:p.lat,lon:p.lon,radius_m:500,detail:'phone'}),buf=new DataView(await (await raw(m.data_url)).arrayBuffer());
   // ring 1 (4 m cells, ~1 km across) shows the towers that matter; ring 0 alone is only ~250 m
   const ring=m.rings.find(r=>r.cell_m>=2)||m.rings[m.rings.length-1],n=ring.width,hs=new Array(n*n);
@@ -318,8 +318,8 @@ function renderCard(){const sp=S.sel,d=S.d;if(!sp){$('#card').innerHTML='<div cl
  $('#card').innerHTML=head+tabs+`<div class="view">${view}</div>`+sl+`<div class="cols"><div><h3 style="margin-bottom:6px">Aerial view</h3><img id="photo" alt="Aerial photo looking toward the sun"><p class="note" id="pnote"></p></div><div><h3 style="margin-bottom:6px">Who to ask</h3>${bl}</div></div>`;
  document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;renderCard()});
  const tm=$('#tm');if(tm)tm.oninput=e=>{S.t=+e.target.value;document.querySelector('label[for=tm]').textContent='Time: '+clk(S.t);if(S.tab==='h'&&ready&&c)document.querySelector('.view').innerHTML=pano(c);else sun3D()};
- if(c){const im=$('#photo'),fail=()=>{im.onerror=null;im.src=MOCK.photo(c.az);$('#pnote').textContent='Sample image. No Vexcel aerial photo for this spot.'};
-  photoFor(sp,c.az).then(m=>{if(S.sel!==sp)return;im.onerror=fail;im.src=m.src;$('#pnote').textContent=m.note}).catch(()=>{if(S.sel===sp)fail()})}
+ if(c){const im=$('#photo'),fail=()=>{if(!im.isConnected)return;im.onerror=null;im.src=MOCK.photo(c.az);$('#pnote').textContent='Sample image. No Vexcel aerial photo for this spot.'};
+  photoFor(sp,c.az).then(m=>{if(S.sel!==sp||!im.isConnected)return;im.onerror=fail;im.src=m.src;$('#pnote').textContent=m.note}).catch(()=>{if(S.sel===sp)fail()})}
  if(S.tab==='3'&&ready&&c)build3D(c);else if(S.tab==='3'&&d.scene===false)document.querySelector('.view').innerHTML='<div class="msg err">Could not load the 3D scene.</div>'}
 /* ---------- 3D: x = east, y = up, z = south. grid: row-major, row 0 north, col 0 west, centred on the spot ---------- */
 const V=(az,el,r)=>new THREE.Vector3(Math.sin(az*rad)*Math.cos(el*rad)*r,Math.sin(el*rad)*r,-Math.cos(az*rad)*Math.cos(el*rad)*r);

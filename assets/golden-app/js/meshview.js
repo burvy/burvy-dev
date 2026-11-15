@@ -64,12 +64,16 @@ export async function create({ host, base = '', lat, lon, yaw = 270, tilesetUrl,
   scene.add(tiles.group);
 
   // photo look: unlit (the capture already has its light), graded for the time of day
+  const maxAniso = renderer.capabilities.getMaxAnisotropy();
   const tint = new THREE.Color(1, 1, 1);
   const mats = new Set();
   tiles.addEventListener('load-model', ({ scene: s }) => {
     s.traverse(o => {
       if (!o.isMesh) return;
       const old = o.material;
+      // Vexcel's KTX2 textures come without mipmaps, so distant and oblique walls shimmer; anisotropic
+      // filtering takes several samples along the slant and is the only filtering we can add to them
+      if (old.map) { old.map.anisotropy = maxAniso; old.map.needsUpdate = true; }
       const m = new THREE.MeshBasicMaterial({ map: old.map, color: tint.clone(), toneMapped: false });
       old.dispose(); o.material = m; mats.add(m);
     });
