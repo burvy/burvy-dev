@@ -327,15 +327,23 @@ files: the cost-function library is built into it.
 shot offline (its call sheet says "planned offline"). With one, put the bare key on one line in
 `C:\burvy\secrets\golden\anthropic.key`, and set a **monthly spending limit** on that key in
 the Anthropic console: every chat costs credit paid by burvy.
-6. **Run it** with these set, the same way as the other servers (and in the scheduled restart):
+6. **Run it** with these set, as a scheduled task that runs as SYSTEM at start-up and restarts
+if it stops, like Primer's (`tools\deploy\install.ps1` in primer). The ready-made script and
+task for this are in golden task 069's `server-pc-prompt.md` (a prompt for a Claude session on
+the server PC that does steps 3-7 and 10).
 ```
-GOLDEN_ADDR=127.0.0.1:8787
+GOLDEN_BIND=127.0.0.1:8787
 GOLDEN_OFFLINE=1
 VEXCEL_CACHE_DIR=C:\burvy\data\golden\cache                (LiDAR uses it too, under lidar\)
-ANTHROPIC_ENV_FILE=C:\burvy\secrets\golden\anthropic.key   (optional, see 5)
+GOLDEN_CLAUDE_DAILY_MAX=300                                (Claude calls a day, whole site)
+ANTHROPIC_ENV_FILE=C:\burvy\secrets\golden\anthropic.key   (optional, see 5; else GOLDEN_CLAUDE=off)
 COSTAR_KIT_DIR=C:\burvy\data\golden\costar                 (only if 1 says yes)
 ```
-Check it: `curl http://127.0.0.1:8787/api/health` on the server PC answers 200.
+Per-IP limits are on by default (a minute: chat 6, search/scene/photo 30, other API calls
+300; see golden's README "Going live"). No CORS or proxy setting is needed: nginx connects from
+the same PC, so golden trusts its `CF-Connecting-IP`.
+Check it: `curl http://127.0.0.1:8787/api/health` on the server PC answers `ok`, and the log's
+`guard:` line says OFFLINE.
 7. **nginx**: in `nginx.conf`, inside the `server { ... }` block that serves burvy.dev (if there
 is one for port 80 and one for 443, put it in both), paste:
 ```
