@@ -239,6 +239,165 @@ certs) is enough. New site origin? Update `PRIMER_ALLOWED_ORIGINS` and Google's 
 11. The site picks the server by hostname (`crates/primer-wasm/src/lib.rs`): `localhost` uses
 the Trunk proxy, anywhere else `https://primer-api.burvy.dev`.
 
+# Golden
+[Golden](https://github.com/burvy/golden) finds where and when to film the golden hour
+(sun, horizon and rooftops on a map). It is its own Rust project (from HackPrinceton
+Fall 2026), kept at `Z:\3Projects\golden`, so **not** next to this folder like the others.
+It shows up here as the `/golden` experience.
+
+## How it is wired
+- Golden's web front end (golden's `web/`) is a static page. `index.html` is the current
+page (code in `v2/js/`), `classic/` is golden's first page (it uses `js/` and `golden-hero.js`,
+and the current page links to it), and `v2/` only redirects to `index.html`. It is copied as-is into `assets/golden-app/` and that copy is committed, the same as
+`metric-balls` and `3d-learn`. `index.html` has a `copy-dir` for it, so it ends up in
+`/golden-app/`. (Not `/golden/`: if a folder has the same name as the route, `trunk serve`
+redirects `/golden` to that folder, so a reload would open golden's page on its own, without
+the site. `/golden/api/` stays only the proxy.)
+- To refresh the copy after golden's web changes, take it from golden's `main` on GitHub,
+not from a local checkout (that may be behind or have unfinished work):
+```
+git -C Z:\3Projects\golden fetch origin
+Remove-Item assets\golden-app\* -Recurse -Force
+git -C Z:\3Projects\golden archive origin/main web | tar -x -C assets\golden-app --strip-components=1 --exclude .DS_Store
+```
+- `src/experiences/golden.rs` is the page. Golden's page styles `body` and loads three.js
+itself, so it is iframed (like `metric_balls.rs`), which keeps its css off this site.
+- The iframe opens `/golden-app/index.html?api=/golden`. Golden's page reads `?api=` as its
+API address (without it, it uses its own default, `http://localhost:8787`), so here it calls
+`/golden/api/...` on this site's address. Primer already has `/api/`, so golden gets its
+own prefix.
+- `Trunk.toml` sends `/golden/api/` to golden's server at `127.0.0.1:8787/api/`.
+- If golden's server does not answer, the page shows saved example data and says so in its
+header ("Example data (server not reachable)"), so the page never breaks. (The classic page
+does the same per endpoint: "Sample data for ...".)
+- The card image `assets/images/golden.png` is a **placeholder** (2000x1000), to be drawn.
+
+## Running locally
+Golden's server needs to be running too, on port 8787 (by default it only listens on
+`127.0.0.1`). It reads its keys from environment variables, or from key files:
+`VEXCEL_ENV_FILE` and `ANTHROPIC_ENV_FILE` can each point at a file holding just the key on
+one line (as Vexcel hands it out) or a `.env` with `NAME=...` lines, and other keys come from
+golden's shared `env\.env` (see golden's README, "Configuration"). Without a Vexcel key, areas
+already in its cache still work; without an Anthropic key, golden plans the shot offline:
+```
+cd Z:\3Projects\golden
+.\run.ps1
+```
+Then, in this folder:
+```
+trunk serve --release
+```
+Open http://localhost:8080/golden. If golden's header says "Example data", the page could not
+reach golden's server.
+
+## Known issues
+- The copy in `assets/golden-app/` does not update by itself; refresh it (above) when golden's
+web changes.
+- Golden's page loads three.js, fonts and map tiles from other sites (CDNs, Esri), so it needs
+the internet even locally.
+
+## Golden: going live
+burvy.dev is static files served by nginx on the server PC (see "Building": `.\menu.ps1` lists
+what changed, and you copy it over). Golden's API goes on the **same address**: nginx sends
+`https://burvy.dev/golden/api/...` to golden's server at `127.0.0.1:8787/api/...` on the same PC.
+So, unlike Primer and plgroup, there is **no** `golden-api` subdomain, no Cloudflare rule, no
+origin certificate, no CORS and no new port to open: golden's server only listens on the PC
+itself. The iframe's `?api=/golden` is the same locally (Trunk's proxy) and live (nginx).
+
+**Cache only.** The hackathon Vexcel key expires on 2026-11-15, so the live server runs
+**without** a Vexcel key and with `GOLDEN_OFFLINE=1`: it never downloads anything (Vexcel,
+LiDAR, Google) and serves only what is in its cache, downtown LA and Princeton (the areas
+fetched during the hackathon). Elsewhere it answers with a clear "not available offline".
+
+Checklist (all on the server PC unless it says otherwise):
+1. **No CoStar on the public server, on purpose.** The CoStar data kit was licensed for the
+hackathon only, so it never goes to the server PC and `COSTAR_KIT_DIR` stays unset there.
+Golden then has no CoStar building names or contacts (call sheets just have no contacts, and
+`/api/buildings` gives empty lists); search, chat, objects found in the cached Vexcel
+detections, photos and 3D all work.
+2. **Build** (dev PC): pull golden's `main` in `Z:\3Projects\golden` (at least `36bfa9a`, which is also the
+last one tested for going live: 041's guards, 053's cached detections, the chat's shot default
+and replan fix, the public call-sheet wording, and the cost-function library with its latest seed entries), then `.\build.ps1 -Deploy` here (or
+`.\build.ps1 -ServersOnly -Servers golden`, or `.\menu.ps1` and pick `golden-server`). It puts
+`deploy\golden-server.exe` beside the other servers. (Golden's own name for it is
+`server.exe`; it is renamed because `deploy\server.exe` is the chat server.) It needs no other
+files: the cost-function library is built into it. The exe has no `--version`, so note the
+golden commit you built from (`git -C Z:\3Projects\golden log -1 --oneline`); the server PC
+records it in its setup report.
+3. **Folder**: copy `golden-server.exe` to `C:\burvy\golden\`.
+4. **Cache**: copy golden's cache (on the dev PC `Z:\3Projects\golden-cache`, about 2.4 GB) to
+`C:\burvy\data\golden\cache\`. All of `vexcel\` (heights, 3D mesh, map, photos, and
+`vexcel\detect`, the cached object detections that object chats use) and `lidar\` is needed;
+`scene\` can be left out (rebuilt on demand).
+5. **Keys** live on the server PC only, **never** in either repo. **No** Vexcel key (no
+`VEXCEL_API_KEY`, no `VEXCEL_ENV_FILE`). Claude is optional: without a key golden plans the
+shot offline (its call sheet says "planned offline"). With one, put the bare key on one line in
+`C:\burvy\secrets\golden\anthropic.key`, and set a **monthly spending limit** on that key in
+the Anthropic console: every chat costs credit paid by burvy.
+6. **Run it** with these set, as a scheduled task that runs as SYSTEM at start-up and restarts
+if it stops, like Primer's (`tools\deploy\install.ps1` in primer). The ready-made script and
+task for this are in golden task 069's `server-pc-prompt.md` (a prompt for a Claude session on
+the server PC that does steps 3-7 and 10).
+```
+GOLDEN_BIND=127.0.0.1:8787
+GOLDEN_OFFLINE=1
+VEXCEL_CACHE_DIR=C:\burvy\data\golden\cache                (LiDAR uses it too, under lidar\)
+GOLDEN_CLAUDE_DAILY_MAX=300                                (Claude calls a day, whole site)
+ANTHROPIC_ENV_FILE=C:\burvy\secrets\golden\anthropic.key   (optional, see 5; else GOLDEN_CLAUDE=off)
+```
+(No `COSTAR_KIT_DIR`, see 1.)
+Per-IP limits are on by default (a minute: chat 6, search/scene/photo 30, other API calls
+300; see golden's README "Going live"). No CORS or proxy setting is needed: nginx connects from
+the same PC, so golden trusts its `CF-Connecting-IP`.
+Check it: `curl http://127.0.0.1:8787/api/health` on the server PC answers `ok`, and the log's
+`guard:` line says OFFLINE.
+7. **nginx**: in `nginx.conf`, inside the `server { ... }` block that serves burvy.dev (if there
+is one for port 80 and one for 443, put it in both), paste:
+```
+    # golden's API (burvy-dev README, "Golden: going live")
+    location ^~ /golden/api/ {
+        proxy_pass http://127.0.0.1:8787/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header CF-Connecting-IP $http_cf_connecting_ip;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        client_max_body_size 256k;
+        proxy_read_timeout 180s;
+        proxy_send_timeout 180s;
+    }
+```
+`^~` makes it win over any regex `location` (such as one caching `*.png`/`*.js`, which would
+otherwise catch golden's map tiles). The trailing `/` on both paths swaps `/golden/api/` for
+`/api/`. `proxy_read_timeout` is long because a chat answer can take ~40 s. Golden's rate
+limits read the visitor's address from `CF-Connecting-IP`, so keep that line. Then
+`nginx -t` (checks the file) and `nginx -s reload`, from nginx's folder.
+8. **Optional, Cloudflare**: a rate-limiting rule for `burvy.dev/golden/api/*` (the free plan
+has one rule), on top of golden's own limits.
+9. **Upload the site**: `.\menu.ps1`, pick `burvy.dev site`, and copy the files it lists from
+`deploy\burvy-dev\dist\` to the server, including the `golden-app\` folder.
+10. **Smoke test**: open https://burvy.dev/golden. Golden's header must **not** say "Example
+data". Ask for a sunset spot in downtown LA: it returns spots, and the photo and 3D view load.
+https://burvy.dev/golden/api/health answers 200.
+11. Tell visitors what works: the brief should name downtown LA or Princeton.
+12. **Optional hardening (burvy decides), last:** do it only after 10 passes and after any
+per-visitor limit test from the server PC (task 069's prompt, check 7): afterwards a local test
+can no longer fake visitor IPs (every local call then counts as 127.0.0.1, one bucket), which is
+expected.
+The block above passes on whatever `CF-Connecting-IP` the
+caller sent. Someone who finds the server PC's own IP and calls nginx directly, skipping Cloudflare,
+can set that header and so choose their own rate-limit bucket. To close that gap, have nginx
+believe the header only from Cloudflare's addresses: in the `http { }` block add one
+`set_real_ip_from <range>;` line per range listed at https://www.cloudflare.com/ips-v4 and
+https://www.cloudflare.com/ips-v6, plus `real_ip_header CF-Connecting-IP;`. Then, in the golden block,
+change the header line to `proxy_set_header CF-Connecting-IP $remote_addr;`. Run `nginx -t` and
+reload. (Allowing only Cloudflare on port 80 in the firewall would also work, but it would break the
+Let's Encrypt http-01 renewals that nginx answers on port 80; see `PORTS.md`.) Cloudflare's ranges
+rarely change, but check them once a year.
+
+To take it down: stop `golden-server.exe`. The page then shows its saved example data and says
+so ("Example data (server not reachable)"); nothing else on the site is affected.
+
 # Adding Items From Other Crates
 To add a new big item, follow this checklist, and note, replace `<!name!> 
 with your crate name (<!Name!> is your crate name but capitalized):

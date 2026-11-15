@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#145a94">
+<title>golden: find where to stand, for any shot</title>
+<!-- the 3D view reuses js/meshview.js, which imports these -->
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/examples/jsm/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/","3d-tiles-renderer":"https://cdn.jsdelivr.net/npm/3d-tiles-renderer@0.3.39/src/index.js"}}</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Frontend v2 (task 057). Same identity as web/index.html (task 032): sky-blue chrome, sunset-orange light.
+   One bold element: the funnel, a band of light that narrows from pale sky into sunset orange as each "must" cuts points.
+   Everything else stays quiet. Goal colours are shared by the goal row, its map layer and its reason in the spot card. */
+:root{color-scheme:light;
+--sky-deep:#145a94;--sky-deep2:#1f72b8;--sky:#3d9be0;--bg:#e6f2fc;--bg2:#f4f9fd;--panel:#fff;--field:#f3f9fe;--tint:#e3f1fb;
+--ink:#0c2a43;--mute:#4a6680;--line:#c3dbee;--sun:#f26b1d;--sun2:#f9a03f;--sun-ink:#b4410b;--on-sun:#0c2a43;
+--g1:#1f72b8;--g2:#16807a;--g3:#f26b1d;--g4:#7d4fb0;--g5:#b07d00;--g6:#c2417a;
+--hdr:56px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg2);color:var(--ink);font:15px/1.5 "Instrument Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.num{font-family:"Bricolage Grotesque","Instrument Sans",system-ui,sans-serif;margin:0;line-height:1.15;font-weight:600}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--sky-deep);outline-offset:2px;border-radius:6px}
+.mute{color:var(--mute)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+header{height:var(--hdr);display:flex;align-items:center;gap:18px;padding:0 20px;padding-top:env(safe-area-inset-top,0px);
+ background:linear-gradient(100deg,var(--sky-deep),var(--sky-deep2));color:#fff;box-shadow:inset 0 -3px 0 var(--sun)}
+header h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+header .what{font-size:14px;color:#dcecf9}
+header .brief{margin-left:auto;font-size:14px;color:#fff;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+header .brief span{background:rgba(255,255,255,.14);border-radius:99px;padding:2px 10px}
+
+/* desktop: chat | stage | goals, each column scrolls on its own */
+main{display:grid;grid-template-columns:minmax(320px,370px) minmax(0,1fr) minmax(300px,340px);height:calc(100vh - var(--hdr));height:calc(100dvh - var(--hdr))}
+main>section,main>aside{min-height:0;overflow:auto}
+
+/* ---------- chat ---------- */
+#chat{display:flex;flex-direction:column;background:var(--panel);border-left:1px solid var(--line)}
+#chat h2{font-size:19px;padding:16px 18px 4px}
+#chat .lede{margin:0 18px 8px;color:var(--mute);font-size:14px}
+#log{flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:8px 16px 12px}
+.b{max-width:88%;padding:9px 12px;border-radius:14px;font-size:14.5px}
+.b.agent{align-self:flex-start;background:var(--tint);border:1px solid var(--line);border-bottom-left-radius:4px}
+.b.user{align-self:flex-end;background:var(--sky-deep);color:#fff;border-bottom-right-radius:4px}
+.steps{align-self:stretch;margin:2px 0;padding:0 0 0 14px;border-left:2px solid var(--sun2);list-style:none;font-size:13px;color:var(--mute)}
+.steps li{padding:2px 0}
+.steps b{color:var(--ink);font-weight:600}
+#known{display:flex;flex-wrap:wrap;gap:5px;padding:0 16px}
+#known:empty{display:none}
+.chip{border:1px solid var(--line);border-radius:99px;padding:1px 9px;font-size:13px;background:var(--bg2)}
+.chip.pick{border-style:dashed}
+#choices{display:flex;flex-wrap:wrap;gap:6px;padding:8px 16px 0}
+#choices:empty{display:none}
+#choices button{border-radius:99px;padding:7px 13px;background:var(--panel);border:1px solid var(--sun);color:var(--sun-ink);font-weight:600;min-height:40px}
+#choices button.def{background:linear-gradient(180deg,var(--sun2),var(--sun));color:var(--on-sun)}
+#say{display:flex;gap:8px;padding:12px 16px 16px;border-top:1px solid var(--line);margin-top:10px}
+#say textarea{flex:1;resize:none;height:46px;border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:var(--field);font-size:16px}
+#say button{border:0;border-radius:12px;padding:0 16px;font-weight:700;background:linear-gradient(180deg,var(--sun2),var(--sun));color:var(--on-sun)}
+#gonow{margin:6px 16px 0;align-self:flex-start;border:0;background:none;color:var(--sky-deep);font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:6px 0}
+.dots i{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:var(--mute);animation:bl 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes bl{50%{opacity:.25}}
+
+/* ---------- stage: funnel, map, spot ---------- */
+#stage{padding:16px 20px 28px;display:flex;flex-direction:column;gap:14px}
+#stage>*{flex-shrink:0}
+#funnel{position:relative;padding:4px 0 0}
+#funnel svg{display:block;width:100%;height:84px}
+.fsteps{display:grid;grid-template-columns:repeat(var(--n,4),1fr);margin-top:-84px;height:84px;position:relative}
+.fs{display:flex;flex-direction:column;justify-content:center;padding:0 10px;min-width:0}
+.fs .num{font-size:28px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.fs.last .num{color:var(--sun-ink)}
+.fcap{display:grid;grid-template-columns:repeat(var(--n,4),1fr);margin-top:6px}
+.fcap div{padding:0 10px;font-size:13px;color:var(--mute);line-height:1.3;min-width:0}
+.fcap div b{display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--c);margin-right:5px;vertical-align:0}
+.fcap .check{border:0;padding:0;margin-top:3px;background:none;color:var(--sun-ink);font-weight:600;text-decoration:underline;text-underline-offset:3px;font-size:13px}
+#funnel.flash .num{animation:fl .5s ease}
+@keyframes fl{from{opacity:.35;transform:translateY(3px)}}
+
+.mapwrap{position:relative;border-radius:14px;overflow:hidden;background:#dbe9f4;border:1px solid var(--line)}
+#map{display:block;width:100%;height:clamp(320px,52vh,560px);touch-action:pan-y;cursor:grab}
+#layers{position:absolute;left:12px;top:12px;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 76px)}
+#layers button{display:flex;align-items:center;gap:6px;border:0;border-radius:99px;padding:6px 12px 6px 9px;font-size:13px;font-weight:600;
+ background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(12,42,67,.25);min-height:34px}
+#layers button i{width:10px;height:10px;border-radius:50%;background:var(--c)}
+#layers button[aria-pressed=true]{background:var(--ink);color:#fff}
+#legend{position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.94);border-radius:10px;padding:7px 10px;font-size:12.5px;line-height:1.35;box-shadow:0 1px 3px rgba(12,42,67,.2);max-width:min(440px,calc(100% - 80px));display:flex;flex-direction:column;gap:5px}
+#legend .lrow{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+#legend .ramp{display:inline-block;height:9px;width:64px;border-radius:4px;flex:none}
+#legend .pins{display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+#legend .pin{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--sun);font:800 10.5px "Bricolage Grotesque",sans-serif;margin-right:1px}
+#legend .pins button{margin-left:6px;border:1px solid var(--sun);background:#fff;color:var(--sun-ink);border-radius:99px;padding:3px 10px;font-weight:600;font-size:12.5px;min-height:30px}
+.mapctl{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px}
+.mapctl button{width:40px;height:40px;border:0;border-radius:10px;background:rgba(255,255,255,.94);box-shadow:0 1px 3px rgba(12,42,67,.25);font:700 20px/1 "Instrument Sans",sans-serif;color:var(--ink)}
+.mapctl svg{width:18px;height:18px;vertical-align:middle}
+#searcharea{position:absolute;left:50%;top:56px;transform:translateX(-50%);border:0;border-radius:99px;padding:9px 18px;font-weight:700;min-height:42px;
+ background:linear-gradient(180deg,var(--sun2),var(--sun));color:var(--on-sun);box-shadow:0 2px 10px rgba(12,42,67,.35)}
+#searcharea[hidden],#busy[hidden],#toast[hidden]{display:none}
+#busy{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(12,42,67,.88);color:#fff;border-radius:12px;padding:12px 18px;font-weight:600;max-width:80%}
+#toast{border-radius:10px;padding:10px 12px;background:var(--tint);border:1px solid var(--line);font-size:14px}
+#toast.err{background:#fff1e8;border-color:#f6cfb3;color:var(--sun-ink)}
+#classic{flex:none;font-size:12.5px;color:#dcecf9;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+#datamode:empty{display:none}
+#datamode{font-size:12px;background:rgba(255,255,255,.18);border-radius:99px;padding:2px 10px;color:#fff}
+.attrib{position:absolute;right:8px;bottom:6px;font-size:11px;color:#fff;text-shadow:0 0 3px #000}
+.empty[hidden]{display:none}
+.empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;background:linear-gradient(180deg,rgba(230,242,252,.55),rgba(230,242,252,.85))}
+.empty p{max-width:34ch;font-size:16px;margin:0}
+
+/* the spot card */
+#spot{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+#spot[hidden]{display:none}
+.sp-head{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.sp-rank{display:flex;gap:4px}
+.sp-rank button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--bg2);font:700 15px "Bricolage Grotesque",sans-serif}
+.sp-rank button[aria-pressed=true]{background:var(--sun);border-color:var(--sun);color:var(--on-sun)}
+.sp-rank{flex-wrap:wrap;flex-shrink:0;max-width:206px}.sp-rank button.new{border-style:dashed;border-color:var(--sun)}
+.sp-title{min-width:0}
+.sp-title h2{font-size:20px}
+.sp-title p{margin:0;color:var(--mute);font-size:14px}
+.sp-score{margin-left:auto;text-align:right}
+.sp-score .num{font-size:30px;font-weight:800;color:var(--sun-ink);line-height:1}
+.sp-score small{color:var(--mute);font-size:12px}
+.sp-body{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+.sp-why{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.reasons{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+.reasons li{display:grid;grid-template-columns:1fr 46px;gap:2px 10px;align-items:center}
+.reasons .gname{font-weight:600;font-size:14px;display:flex;align-items:center;gap:7px}
+.reasons .gname i{width:10px;height:10px;border-radius:2px;background:var(--c);flex:none}
+.reasons .gname em{font-style:normal;font-weight:500;color:var(--mute);font-size:12.5px}
+.reasons .bar{grid-column:1;height:5px;border-radius:3px;background:var(--tint);overflow:hidden}
+.reasons .bar b{display:block;height:100%;background:var(--c)}
+.reasons .v{grid-row:1/3;grid-column:2;text-align:right;font:700 16px "Bricolage Grotesque",sans-serif;font-variant-numeric:tabular-nums}
+.reasons .w{grid-column:1/3;font-size:13px;color:var(--mute)}
+.ai{border-radius:10px;background:linear-gradient(180deg,#fff6ee,#fff);border:1px solid #f6cfb3;padding:10px 12px}
+.ai h3{font-size:14px;display:flex;align-items:center;gap:8px}
+.ai p{margin:4px 0 0;font-size:14px}
+.verdict{font:600 12px "Instrument Sans",sans-serif;border-radius:99px;padding:1px 8px;background:var(--sun);color:var(--on-sun)}
+.verdict.caution,.verdict.moved_down{background:#ffd8a8}.verdict.ruled_out{background:#e8d6d6;color:#6b2020}.verdict.none{background:var(--tint);color:var(--mute)}
+.ai button{margin-top:8px;border:1px solid var(--sun);background:#fff;color:var(--sun-ink);border-radius:8px;padding:6px 10px;font-weight:600}
+.sp-media{border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.sp-tabs{display:flex;gap:4px;padding:10px 12px 0}
+.sp-tabs button{border:1px solid var(--line);background:var(--bg2);border-radius:8px;padding:5px 12px;font-weight:600;font-size:14px;min-height:36px}
+.sp-tabs button[aria-selected=true]{background:var(--sky-deep);border-color:var(--sky-deep);color:#fff}
+.view{margin:10px 12px;border-radius:10px;overflow:hidden;background:linear-gradient(180deg,#a9cdea,#f7c99a);aspect-ratio:4/3;position:relative}
+.view img{width:100%;height:100%;object-fit:cover;display:block}
+.view .ph{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:14px;color:var(--ink);font-size:14px}
+.view canvas{display:block}
+.calls{list-style:none;margin:0 12px 12px;padding:0;font-size:14px}
+.calls li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+.calls a{color:var(--sky-deep);font-weight:600;white-space:nowrap}
+
+/* ---------- goals ---------- */
+#goals{background:var(--panel);border-right:1px solid var(--line);padding:16px 16px 28px;position:relative}
+#goals h2{font-size:19px}
+#goals .lede{margin:2px 0 14px;color:var(--mute);font-size:14px}
+.group{margin:0 0 16px}
+.group h3{font-size:15px;margin:0 0 8px;display:flex;align-items:baseline;gap:8px}
+.group h3 small{font:500 12.5px "Instrument Sans",sans-serif;color:var(--mute)}
+.glist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.goal{border:1px solid var(--line);border-left:4px solid var(--c);border-radius:10px;padding:10px 10px 10px 12px;background:var(--panel)}
+.goal.must{background:linear-gradient(90deg,color-mix(in srgb,var(--c) 7%,#fff),#fff 60%)}
+.ghead{display:flex;align-items:center;gap:6px}
+.ghead h4{font:600 15px "Bricolage Grotesque",sans-serif;margin:0;flex:1;min-width:0}
+.ib{width:34px;height:34px;border-radius:8px;border:1px solid transparent;background:none;display:grid;place-items:center;color:var(--mute)}
+.ib:hover{background:var(--tint)}
+.ib[aria-pressed=true]{background:var(--ink);color:#fff}
+.ib svg{width:18px;height:18px}
+.goal p{margin:2px 0 8px;font-size:14px;color:var(--mute)}
+.ctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sw{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;cursor:pointer;min-height:34px}
+.sw input{appearance:none;width:34px;height:20px;border-radius:99px;background:var(--line);position:relative;margin:0;cursor:pointer;transition:background .15s}
+.sw input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.sw input:checked{background:var(--c)}.sw input:checked::after{transform:translateX(14px)}
+.wt{display:flex;align-items:center;gap:8px;flex:1;min-width:150px}
+.wt input{flex:1;accent-color:var(--c);min-height:30px}
+.wt output{font:700 14px "Bricolage Grotesque",sans-serif;width:30px;text-align:right;font-variant-numeric:tabular-nums}
+.gmeta{font-size:12.5px;color:var(--mute);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
+.gmeta .new{color:var(--sun-ink);font-weight:600}
+.gmeta button{border:0;background:none;padding:0;color:var(--sky-deep);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.goal details{margin-top:6px;font-size:12.5px}
+.goal summary{cursor:pointer;color:var(--sky-deep);font-weight:600;width:max-content}
+.formula{display:block;width:100%;margin:6px 0 0;padding:8px;background:var(--bg2);border:1px solid var(--line);border-radius:8px;font:12.5px/1.45 ui-monospace,Consolas,monospace;min-height:120px;max-height:260px;resize:vertical}
+.frow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+.frow button{border:1px solid var(--sun);background:#fff;color:var(--sun-ink);border-radius:8px;padding:6px 10px;font-weight:600;min-height:36px}
+.ferr{color:var(--sun-ink);font-size:12.5px}
+.goal.gone{border-left-color:var(--line);opacity:.75}.goal.gone h4{text-decoration:line-through}
+.reset{border:0;background:none;color:var(--sky-deep);font-weight:600;text-decoration:underline;text-underline-offset:3px;padding:6px 0;margin-bottom:8px}
+button[disabled]{opacity:.55;cursor:default}
+.gempty{border:1px dashed var(--line);border-radius:10px;padding:14px;color:var(--mute);font-size:14px}
+#addgoal{width:100%;border:1px dashed var(--sky);background:var(--bg2);border-radius:10px;padding:11px;font-weight:600;color:var(--sky-deep);min-height:44px}
+#newbrief{margin-left:auto;border:0;background:none;color:var(--sky-deep);font-weight:600;font-size:13.5px;text-decoration:underline;text-underline-offset:3px;padding:4px 0;min-height:32px}
+#chat .top{display:flex;align-items:baseline;padding:16px 18px 4px}#chat .top h2{padding:0}
+
+
+/* ---------- phone and tablet: one column, in the order you use it ---------- */
+@media (max-width:980px){
+ :root{--hdr:auto}
+ header{height:auto;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;flex-wrap:wrap;gap:4px 12px}
+ header .brief{margin-left:0;justify-content:flex-start;width:100%}
+ main{display:flex;flex-direction:column;height:auto}
+ main>section,main>aside{overflow:visible}
+ #chat{border-left:0;border-bottom:1px solid var(--line);order:-1} /* desktop: numbers left, chat right; phone keeps chat first */
+ #log{max-height:46vh;max-height:46svh}
+ #stage{padding:14px 12px 8px}
+ #goals{border-right:0;border-top:1px solid var(--line);padding:16px 12px 28px;order:1}
+ .fs .num{font-size:21px}.fs{padding:0 6px}.fcap div{padding:0 6px;font-size:12px}
+ #map{height:62vh;height:62svh}
+ #layers{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:calc(100% - 70px)}#layers button{flex:none}
+ .wide{display:none}
+ #legend{max-width:calc(100% - 24px)}
+ .sp-body{grid-template-columns:1fr}.sp-media{border-left:0;border-top:1px solid var(--line)}
+ .sp-head{flex-wrap:wrap}.sp-rank{order:3;width:100%}.sp-rank button{width:44px;height:44px}
+ .ib{width:44px;height:44px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head>
+<body>
+<header>
+  <h1>golden</h1><span class="what">Find where to stand, for any shot</span><span id="datamode"></span>
+  <div class="brief" id="hbrief" aria-label="The brief so far"></div>
+  <a id="classic" href="classic/">Classic page</a>
+</header>
+<main>
+  <aside id="goals" aria-label="Goals">
+    <h2>What I’m filtering for</h2>
+    <p class="lede">I turned the brief into these goals. Change a weight or a must and the map and spots update straight away.</p>
+    <div id="glists"></div>
+    <button id="addgoal" type="button" hidden>Add a goal: tell me in the chat</button>
+  </aside>
+
+  <section id="stage" aria-label="Results">
+    <div id="funnel" aria-label="How the points were cut down"></div>
+    <div class="mapwrap">
+      <canvas id="map" aria-label="Map of candidate points, coloured by score"></canvas>
+      <div id="layers" role="toolbar" aria-label="Map layer"></div>
+      <div id="legend" hidden></div>
+      <div class="mapctl"><button type="button" id="zin" aria-label="Zoom in">+</button><button type="button" id="zout" aria-label="Zoom out">&minus;</button><button type="button" id="zfit" aria-label="Back to the searched area" title="Back to the searched area"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></button></div>
+      <button type="button" id="searcharea" hidden data-needs-server>Search this area</button>
+      <div id="busy" role="status" hidden></div>
+      <div class="attrib" id="attrib"></div>
+      <div class="empty" id="mapempty"><p>The map fills in once the brief is clear: every point I can stand on, coloured by how well it fits.</p></div>
+    </div>
+    <div id="toast" role="status" hidden></div>
+    <article id="spot" hidden aria-label="Selected spot"></article>
+  </section>
+
+  <section id="chat" aria-label="Brief">
+    <div class="top"><h2>Tell me the shot</h2><button type="button" id="newbrief">New brief</button></div>
+    <div id="log" aria-live="polite"></div>
+    <div id="known"></div>
+    <div id="choices"></div>
+    <button id="gonow" type="button" hidden>Search now with my picks</button>
+    <form id="say"><label class="sr" for="msg">Message</label><textarea id="msg" rows="1" placeholder="Describe the shot"></textarea><button>Send</button></form>
+  </section>
+</main>
+<script type="module" src="v2/js/app.js"></script>
+</body></html>

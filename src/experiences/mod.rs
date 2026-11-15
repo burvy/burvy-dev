@@ -65,6 +65,13 @@ pub const EXPERIENCES: &[Experience] = &[
         path: "/halcyon",
     },
     Experience {
+        name: "Golden",
+        // placeholder image, to be drawn (2000x1000)
+        background: "images/golden.png",
+        description: "finds where and when to film the golden hour: sun, horizon and rooftops on a map",
+        path: "/golden",
+    },
+    Experience {
         name: "Test",
         background: "images/glitchcity.jpg",
         description: "test experience to make sure everything works",
@@ -150,6 +157,7 @@ pub mod amity;
 pub mod chat;
 pub mod floret;
 pub mod game;
+pub mod golden;
 pub mod halcyon;
 pub mod learn3d;
 pub mod life;

@@ -15,6 +15,7 @@ and forwarded on the router. Ports are read from the code (file:line, paths rela
 | chat | `server.exe` | 4433 | **UDP** | chat rooms (WebTransport/QUIC), `webtrans.burvy.dev` | **yes**: browsers connect straight to it |
 | plgroup | `plgroup-server.exe` | 3120 | TCP (https) | `plgroup-api.burvy.dev` API | **yes, Cloudflare only**: Cloudflare's Origin Rule sends it straight to 3120; nginx does not proxy it |
 | primer | `primer-server.exe` | 3140 | TCP (https) | `primer-api.burvy.dev` API (hosted mode) | **yes, Cloudflare only**, if you run it hosted (`PRIMER_ADDR=0.0.0.0:3140`). Default `127.0.0.1:3000` = loopback, nothing to open |
+| golden | `golden-server.exe` | 8787 | TCP (http) | golden's API, reached as `burvy.dev/golden/api/` through nginx | **no**: loopback only (`GOLDEN_ADDR=127.0.0.1:8787`), nginx on the same PC proxies it |
 | nginx | (not in this folder) | 80 | TCP | the sites over http, and ACME http-01 challenges for every certificate | **yes**: confirmed listening (`listen 80` blocks for tether and sandbags, server-PC report 2026-11-09) |
 | nginx | (not in this folder) | 443 | TCP | https for the sites | **assumed, not confirmed**: no nginx.conf in the repos, and the report only shows port-80 blocks. burvy.dev's Cloudflare zone default is **Flexible** (`burvy-dev/README.md:116`), so Cloudflare reaches the origin over http on 80; 443 is only needed for a host set to Full. Check `nginx.conf` for a `listen 443` before opening it |
 
@@ -71,6 +72,11 @@ if nginx really listens on it).
 - (The other documented setup, standalone behind Caddy on TCP 3130, isn't part of this bundle;
   its own script adds the rule `Primer (Cloudflare only)`.)
 - `New-NetFirewallRule -DisplayName 'primer API (Cloudflare)' -Direction Inbound -Protocol TCP -LocalPort 3140 -Action Allow`
+
+### golden: `golden-server.exe` (Z:/3Projects/golden, crates/server, package `server`)
+- `GOLDEN_ADDR` defaults to `127.0.0.1:8787` (`golden/crates/server/src/main.rs:41`). Keep it on loopback:
+  nginx's `location ^~ /golden/api/` (burvy-dev README, "Golden: going live") proxies to it on the same PC.
+  Nothing to open in the firewall or on the router.
 
 ### nginx: the sites
 - **TCP 80**: the sites over http (Cloudflare Flexible connects to the origin on 80) and the

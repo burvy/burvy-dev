@@ -6,3 +6,10 @@ ignore = ["plgroup-server", "crates/statesmc"]
 # /api/ on the site's own address, so no cross-origin set-up is needed
 [[proxy]]
 backend = "http://localhost:3140/api/"
+
+# for testing golden locally: its server (port 8787, see the README) answers
+# /golden/api/ on the site's own address (its own prefix, so it can't clash
+# with Primer's /api/ above)
+[[proxy]]
+rewrite = "/golden/api/"
+backend = "http://127.0.0.1:8787/api/"
