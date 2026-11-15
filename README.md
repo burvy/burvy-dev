@@ -299,7 +299,9 @@ the internet even locally.
 ## Golden: going live
 burvy.dev is static files served by nginx on the server PC (see "Building": `.\menu.ps1` lists
 what changed, and you copy it over). Golden's API goes on the **same address**: nginx sends
-`https://burvy.dev/golden/api/...` to golden's server at `127.0.0.1:8787/api/...` on the same PC.
+`https://burvy.dev/golden/api/...` to golden's server at `127.0.0.1:8797/api/...` on the same PC.
+(On the server PC golden uses port **8797**, because 8787, golden's default and the port used on the dev PC,
+is already taken there, probably by tether. If 8797 is taken too, use 8798 or 8799 in every place below.)
 So, unlike Primer and plgroup, there is **no** `golden-api` subdomain, no Cloudflare rule, no
 origin certificate, no CORS and no new port to open: golden's server only listens on the PC
 itself. The iframe's `?api=/golden` is the same locally (Trunk's proxy) and live (nginx).
@@ -339,7 +341,7 @@ if it stops, like Primer's (`tools\deploy\install.ps1` in primer). The ready-mad
 task for this are in golden task 069's `server-pc-prompt.md` (a prompt for a Claude session on
 the server PC that does steps 3-7 and 10).
 ```
-GOLDEN_BIND=127.0.0.1:8787
+GOLDEN_BIND=127.0.0.1:8797                                 (8787 is taken on the server PC)
 GOLDEN_OFFLINE=1
 VEXCEL_CACHE_DIR=C:\burvy\data\golden\cache                (LiDAR uses it too, under lidar\)
 GOLDEN_CLAUDE_DAILY_MAX=300                                (Claude calls a day, whole site)
@@ -349,14 +351,14 @@ ANTHROPIC_ENV_FILE=C:\burvy\secrets\golden\anthropic.key   (optional, see 5; els
 Per-IP limits are on by default (a minute: chat 6, search/scene/photo 30, other API calls
 300; see golden's README "Going live"). No CORS or proxy setting is needed: nginx connects from
 the same PC, so golden trusts its `CF-Connecting-IP`.
-Check it: `curl http://127.0.0.1:8787/api/health` on the server PC answers `ok`, and the log's
+Check it: `curl http://127.0.0.1:8797/api/health` on the server PC answers `ok`, and the log's
 `guard:` line says OFFLINE.
 7. **nginx**: in `nginx.conf`, inside the `server { ... }` block that serves burvy.dev (if there
 is one for port 80 and one for 443, put it in both), paste:
 ```
     # golden's API (burvy-dev README, "Golden: going live")
     location ^~ /golden/api/ {
-        proxy_pass http://127.0.0.1:8787/api/;
+        proxy_pass http://127.0.0.1:8797/api/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header CF-Connecting-IP $http_cf_connecting_ip;
