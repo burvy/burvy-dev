@@ -253,9 +253,7 @@ page. It is copied as-is into `assets/golden-app/` and that copy is committed, t
 redirects `/golden` to that folder, so a reload would open golden's page on its own, without
 the site. `/golden/api/` stays only the proxy.)
 - To refresh the copy after golden's web changes, take it from golden's `main` on GitHub,
-not from a local checkout (that may be behind or have unfinished work). (Until golden's
-`web/api-base` branch is merged, `main` doesn't have the `?api=` change below; the current copy
-was taken from that branch.)
+not from a local checkout (that may be behind or have unfinished work):
 ```
 git -C Z:\3Projects\golden fetch origin
 Remove-Item assets\golden-app\* -Recurse -Force
@@ -274,8 +272,11 @@ endpoint and says so in its header ("Sample data for ..."), so the page never br
 
 ## Running locally
 Golden's server needs to be running too, on port 8787 (by default it only listens on
-`127.0.0.1`). Its keys are environment variables, read from golden's `env\.env` by default
-(see golden's README, "Configuration"). Without them, the parts that need them use sample data:
+`127.0.0.1`). It reads its keys from environment variables, or from key files:
+`VEXCEL_ENV_FILE` and `ANTHROPIC_ENV_FILE` can each point at a file holding just the key on
+one line (as Vexcel hands it out) or a `.env` with `NAME=...` lines, and other keys come from
+golden's shared `env\.env` (see golden's README, "Configuration"). Without a Vexcel key, areas
+already in its cache still work; without an Anthropic key, golden plans the shot offline:
 ```
 cd Z:\3Projects\golden
 .\run.ps1
@@ -289,7 +290,8 @@ call reached the server, or lists the ones that are on sample data.
 
 ## Known issues
 - The copy in `assets/golden-app/` does not update by itself; refresh it (above) when golden's
-web changes.
+web changes. Golden's task 043 (3D view quality) will change `web/js/`, so refresh the copy
+after it merges.
 - Golden's page loads three.js, fonts and map tiles from other sites (CDNs, Esri), so it needs
 the internet even locally.
 
@@ -297,13 +299,13 @@ the internet even locally.
 Not done yet. burvy.dev is static, so on the live site `/golden/api/` (on the site's own
 address) has to reach golden's server.
 
-**Plan: cache only.** The hackathon Vexcel key expires on 2026-11-15, so the live server runs
-**without** a Vexcel key and serves only what is already in its cache: downtown LA and
+**Plan: cache only.** The hackathon Vexcel key stays valid until after judging and then
+expires, so the live server runs **without** a Vexcel key and serves only what is already in its cache: downtown LA and
 Princeton (the areas fetched during the hackathon). Golden's server already does this when it
 has no key: map tiles, aerial photos, the 3D mesh and Vexcel heights come from the cache
 (cached ~0.9 m height tiles stand in for missing 6 cm ones), and heights fall back to free
-USGS LiDAR where nothing is cached. Elsewhere the map has no imagery. (Golden's task 041 adds
-a stricter cache-only switch and deploy guardrails; use it once it is merged.)
+USGS LiDAR where nothing is cached. Elsewhere the map has no imagery. (A stricter cache-only
+switch with deploy guardrails is golden's task 041, deferred for now; use it once it exists.)
 
 Checklist:
 1. **CoStar licence first.** The CoStar data kit (`COSTAR_KIT_DIR`) was given for the
@@ -322,10 +324,11 @@ proxy is somewhere else.
 5. Reverse proxy: `https://burvy.dev/golden/api/*` to golden's `/api/*` (for example a
 Cloudflare Tunnel, or an Origin Rule plus a proxy on the server PC). The address is the
 site's own, so golden's server needs no CORS and the iframe's `?api=/golden` stays the same.
-6. Keys are environment variables on the server PC only, **never** in either repo (golden
-reads them from the environment or from the file in `GOLDEN_ENV_FILE`, e.g.
-`C:\burvy\secrets\golden\.env`). For cache only: **no** `VEXCEL_API_KEY`. `ANTHROPIC_API_KEY`
-is optional: without it, golden plans the shot offline (its call sheet says "planned
+6. Keys live on the server PC only, **never** in either repo. Golden reads each key from the
+environment, else from its own key file, else from the shared `.env` in `GOLDEN_ENV_FILE`.
+A key file can hold just the bare key on one line, e.g. `ANTHROPIC_ENV_FILE` =
+`C:\burvy\secrets\golden\anthropic.key`. For cache only: **no** `VEXCEL_API_KEY` and no
+`VEXCEL_ENV_FILE` (and none in the shared `.env`). `ANTHROPIC_API_KEY` is optional: without it, golden plans the shot offline (its call sheet says "planned
 offline"). `COSTAR_KIT_DIR` (see 1). `GOOGLE_MAPS_API_KEY` only if you want place search.
 7. Rate limits: if an Anthropic key is set, every brief costs credit paid by burvy. Add a
 per-IP limit on `/golden/api/` (in the proxy, or with Cloudflare rate limiting) before
