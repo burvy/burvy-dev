@@ -239,6 +239,101 @@ certs) is enough. New site origin? Update `PRIMER_ALLOWED_ORIGINS` and Google's 
 11. The site picks the server by hostname (`crates/primer-wasm/src/lib.rs`): `localhost` uses
 the Trunk proxy, anywhere else `https://primer-api.burvy.dev`.
 
+# Golden
+[Golden](https://github.com/burvy/golden) finds where and when to film the golden hour
+(sun, horizon and rooftops on a map). It is its own Rust project (from HackPrinceton
+Fall 2026), kept at `Z:\3Projects\golden`, so **not** next to this folder like the others.
+It shows up here as the `/golden` experience.
+
+## How it is wired
+- Golden's web front end (golden's `web/`: `index.html`, `golden-hero.js`, `js/`) is a static
+page. It is copied as-is into `assets/golden-app/` and that copy is committed, the same as
+`metric-balls` and `3d-learn`. `index.html` has a `copy-dir` for it, so it ends up in
+`/golden-app/`. (Not `/golden/`: if a folder has the same name as the route, `trunk serve`
+redirects `/golden` to that folder, so a reload would open golden's page on its own, without
+the site. `/golden/api/` stays only the proxy.)
+- To refresh the copy after golden's web changes, take it from golden's `main` on GitHub,
+not from a local checkout (that may be behind or have unfinished work). (Until golden's
+`web/api-base` branch is merged, `main` doesn't have the `?api=` change below; the current copy
+was taken from that branch.)
+```
+git -C Z:\3Projects\golden fetch origin
+Remove-Item assets\golden-app\* -Recurse -Force
+git -C Z:\3Projects\golden archive origin/main web | tar -x -C assets\golden-app --strip-components=1 --exclude .DS_Store
+```
+- `src/experiences/golden.rs` is the page. Golden's page styles `body` and loads three.js
+itself, so it is iframed (like `metric_balls.rs`), which keeps its css off this site.
+- The iframe opens `/golden-app/index.html?api=/golden`. Golden's page reads `?api=` as its
+API address (without it, it uses its own default, `http://localhost:8787`), so here it calls
+`/golden/api/...` on this site's address. Primer already has `/api/`, so golden gets its
+own prefix.
+- `Trunk.toml` sends `/golden/api/` to golden's server at `127.0.0.1:8787/api/`.
+- If an endpoint does not answer, golden's page uses its own sample data for just that
+endpoint and says so in its header ("Sample data for ..."), so the page never breaks.
+- The card image `assets/images/golden.png` is a **placeholder** (2000x1000), to be drawn.
+
+## Running locally
+Golden's server needs to be running too, on port 8787 (by default it only listens on
+`127.0.0.1`). Its keys are environment variables, read from golden's `env\.env` by default
+(see golden's README, "Configuration"). Without them, the parts that need them use sample data:
+```
+cd Z:\3Projects\golden
+.\run.ps1
+```
+Then, in this folder:
+```
+trunk serve --release
+```
+Open http://localhost:8080/golden. Golden's header says "Connected to server" when every
+call reached the server, or lists the ones that are on sample data.
+
+## Known issues
+- The copy in `assets/golden-app/` does not update by itself; refresh it (above) when golden's
+web changes.
+- Golden's page loads three.js, fonts and map tiles from other sites (CDNs, Esri), so it needs
+the internet even locally.
+
+## Going live
+Not done yet. burvy.dev is static, so on the live site `/golden/api/` (on the site's own
+address) has to reach golden's server.
+
+**Plan: cache only.** The hackathon Vexcel key expires on 2026-11-15, so the live server runs
+**without** a Vexcel key and serves only what is already in its cache: downtown LA and
+Princeton (the areas fetched during the hackathon). Golden's server already does this when it
+has no key: map tiles, aerial photos, the 3D mesh and Vexcel heights come from the cache
+(cached ~0.9 m height tiles stand in for missing 6 cm ones), and heights fall back to free
+USGS LiDAR where nothing is cached. Elsewhere the map has no imagery. (Golden's task 041 adds
+a stricter cache-only switch and deploy guardrails; use it once it is merged.)
+
+Checklist:
+1. **CoStar licence first.** The CoStar data kit (`COSTAR_KIT_DIR`) was given for the
+hackathon. Before anything is public, check that its licence allows showing its building
+data (names, contacts) on a public site. If it doesn't, run the server without
+`COSTAR_KIT_DIR` (building lookups then use golden's fixtures).
+2. Where it runs: golden's server on the server PC, next to the other servers, from a folder
+like `C:\burvy\golden\` (build it with `cargo build --release -p server` in golden).
+3. Cache: copy golden's cache (LA + Princeton; on the dev PC `Z:\3Projects\golden-cache`) to
+`C:\burvy\data\golden\cache\` and point `VEXCEL_CACHE_DIR` (and `LIDAR_CACHE_DIR`) at it.
+Without a key it can't grow from Vexcel; LiDAR lookups outside the cache still add files, so
+keep an eye on the disk.
+4. Bind address: `GOLDEN_ADDR` (default `127.0.0.1:8787`). Keep it on `127.0.0.1` if the
+reverse proxy runs on the server PC; set it (e.g. `0.0.0.0:8787`, firewall open) only if the
+proxy is somewhere else.
+5. Reverse proxy: `https://burvy.dev/golden/api/*` to golden's `/api/*` (for example a
+Cloudflare Tunnel, or an Origin Rule plus a proxy on the server PC). The address is the
+site's own, so golden's server needs no CORS and the iframe's `?api=/golden` stays the same.
+6. Keys are environment variables on the server PC only, **never** in either repo (golden
+reads them from the environment or from the file in `GOLDEN_ENV_FILE`, e.g.
+`C:\burvy\secrets\golden\.env`). For cache only: **no** `VEXCEL_API_KEY`. `ANTHROPIC_API_KEY`
+is optional: without it, golden plans the shot offline (its call sheet says "planned
+offline"). `COSTAR_KIT_DIR` (see 1). `GOOGLE_MAPS_API_KEY` only if you want place search.
+7. Rate limits: if an Anthropic key is set, every brief costs credit paid by burvy. Add a
+per-IP limit on `/golden/api/` (in the proxy, or with Cloudflare rate limiting) before
+linking it anywhere, and set a spending limit on the key.
+8. Tell visitors what works: the brief should name downtown LA or Princeton (the hero brief
+does). Elsewhere there is no imagery.
+9. Take "(BACKEND OFFLINE)" off golden's card in `src/experiences/mod.rs`.
+
 # Adding Items From Other Crates
 To add a new big item, follow this checklist, and note, replace `<!name!> 
 with your crate name (<!Name!> is your crate name but capitalized):
